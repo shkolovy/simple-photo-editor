@@ -6,8 +6,7 @@ import unittest
 # from unittest.mock import MagicMock as moq
 
 
-class ImgModifierTests(unittest.TestCase):
-    """Tests for ImgModifier class"""
+class ImgModifierTestCase(unittest.TestCase):
 
     def setUp(self):
         self.path = "img.jpg"
