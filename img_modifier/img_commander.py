@@ -21,11 +21,11 @@ class ImgCommander:
             logger.error("path is empty of has bad format")
             raise ValueError("path is empty of has bad format")
 
-        try:
-            self._img = Image.open(path)
-        except Exception:
-            logger.error("can't open the file {0}".format(path))
-            raise ValueError("can't open the file {0}".format(path))
+        # try:
+        self._img = Image.open(path)
+        # except Exception:
+        #     logger.error("can't open the file {0}".format(path))
+        #     raise ValueError("can't open the file {0}".format(path))
 
     def __str__(self):
         return "img {} {} {}".format(self._img.format, "%dx%d" % self._img.size, self._img.mode)
@@ -65,4 +65,3 @@ class ImgCommander:
         """Open image"""
 
         self._img.open()
-

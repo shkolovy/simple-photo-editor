@@ -4,3 +4,4 @@ from logging.config import fileConfig
 fileConfig('logging_config.ini')
 
 __all__ = ["color_filter", "img_modifier"]
+
