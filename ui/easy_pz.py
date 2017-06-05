@@ -17,19 +17,57 @@ import logging
 logger = logging.getLogger()
 
 
+class QVLine(QFrame):
+    def __init__(self):
+        super(QVLine, self).__init__()
+        self.setFrameShape(QFrame.VLine)
+        self.setFrameShadow(QFrame.Sunken)
+
+
 class ActionTabs(QTabWidget):
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
         self.filter_tab = FiltersTab(self)
-        self.adjusting_tab = AdjustingTab(self)
+        self.adjustment_tab = AdjustmentTab(self)
         self.modification_tab = ModificationTab(self)
+        self.rotation_tab = RotationTab(self)
 
         self.addTab(self.filter_tab, "Filters")
-        self.addTab(self.adjusting_tab, "Adjusting")
+        self.addTab(self.adjustment_tab, "Adjusting")
         self.addTab(self.modification_tab, "Modification")
+        self.addTab(self.rotation_tab, "Rotation")
 
-        self.setMaximumHeight(200)
+        self.setMaximumHeight(190)
+
+
+class RotationTab(QWidget):
+    def __init__(self, parent):
+        super().__init__()
+
+        btn_size = (90, 50)
+
+        rotate_left_btn = QPushButton("↺ 90°")
+        rotate_left_btn.setMinimumSize(*btn_size)
+
+        rotate_right_btn = QPushButton("↻ 90°")
+        rotate_right_btn.setMinimumSize(*btn_size)
+
+        flip_left_btn = QPushButton("⇆")
+        flip_left_btn.setMinimumSize(*btn_size)
+
+        flip_top_btn = QPushButton("↑↓")
+        flip_top_btn.setMinimumSize(*btn_size)
+
+        btn_layout = QHBoxLayout()
+        btn_layout.setAlignment(Qt.AlignCenter)
+        btn_layout.addWidget(rotate_left_btn)
+        btn_layout.addWidget(rotate_right_btn)
+        btn_layout.addWidget(QVLine())
+        btn_layout.addWidget(flip_left_btn)
+        btn_layout.addWidget(flip_top_btn)
+
+        self.setLayout(btn_layout)
 
 
 class ModificationTab(QWidget):
@@ -49,35 +87,40 @@ class ModificationTab(QWidget):
         print(111)
 
 
-class AdjustingTab(QWidget):
+class AdjustmentTab(QWidget):
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
 
-        contrast_lbl = QLabel('Contrast')
+        contrast_lbl = QLabel("Contrast")
         contrast_lbl.setAlignment(Qt.AlignCenter)
 
-        brightness_lbl = QLabel('Brightness')
+        brightness_lbl = QLabel("Brightness")
         brightness_lbl.setAlignment(Qt.AlignCenter)
 
-        sharpness_lbl = QLabel('Sharpness')
+        sharpness_lbl = QLabel("Sharpness")
         sharpness_lbl.setAlignment(Qt.AlignCenter)
 
         self.contrast_slider = QSlider(Qt.Horizontal, self)
         self.contrast_slider.setMinimum(-100)
         self.contrast_slider.setMaximum(100)
         self.contrast_slider.setValue(0)
+        self.contrast_slider.sliderReleased.connect(self.on_contrast_slider_released)
+        self.contrast_slider.setToolTip(str(0))
 
         self.brightness_slider = QSlider(Qt.Horizontal, self)
-        self.brightness_slider.setMinimum(0)
-        self.brightness_slider.setMaximum(20)
+        self.brightness_slider.setMinimum(-100)
+        self.brightness_slider.setMaximum(100)
         self.brightness_slider.setValue(0)
         self.brightness_slider.sliderReleased.connect(self.on_brightness_slider_released)
+        self.brightness_slider.setToolTip(str(0))
 
         self.sharpness_slider = QSlider(Qt.Horizontal, self)
         self.sharpness_slider.setMinimum(-100)
         self.sharpness_slider.setMaximum(100)
         self.sharpness_slider.setValue(0)
+        self.sharpness_slider.sliderReleased.connect(self.on_sharpness_slider_released)
+        self.sharpness_slider.setToolTip(str(0))
 
         main_layout = QVBoxLayout()
         main_layout.setAlignment(Qt.AlignCenter)
@@ -95,10 +138,20 @@ class AdjustingTab(QWidget):
 
     def on_brightness_slider_released(self):
         logger.debug(self.brightness_slider.value())
-        self.parent.parent.IMG.brightness(self.brightness_slider.value())
-        img = self.parent.parent.IMG.get_img()
-        preview_pix = ImageQt.toqpixmap(img)
-        self.parent.parent.img_lbl.setPixmap(preview_pix)
+        self.brightness_slider.setToolTip(str(self.brightness_slider.value()))
+
+        # self.parent.parent.IMG.brightness(self.brightness_slider.value())
+        # img = self.parent.parent.IMG.get_img()
+        # preview_pix = ImageQt.toqpixmap(img)
+        # self.parent.parent.img_lbl.setPixmap(preview_pix)
+
+    def on_sharpness_slider_released(self):
+        logger.debug(self.sharpness_slider.value())
+        self.sharpness_slider.setToolTip(str(self.sharpness_slider.value()))
+
+    def on_contrast_slider_released(self):
+        logger.debug(self.contrast_slider.value())
+        self.contrast_slider.setToolTip(str(self.contrast_slider.value()))
 
 
 class FiltersTab(QWidget):
@@ -122,32 +175,34 @@ class MainLayout(QVBoxLayout):
         upload_btn = QPushButton("Upload")
         upload_btn.setMinimumWidth(100)
         upload_btn.clicked.connect(self.on_upload)
+        upload_btn.setStyleSheet("font-weight:bold;")
 
         reset_btn = QPushButton("Reset")
         reset_btn.setMinimumWidth(100)
         reset_btn.clicked.connect(self.on_reset)
         reset_btn.setEnabled(False)
+        reset_btn.setStyleSheet("font-weight:bold;")
 
         save_btn = QPushButton("Save")
         save_btn.setMinimumWidth(100)
         save_btn.clicked.connect(self.on_save)
         save_btn.setEnabled(False)
+        save_btn.setStyleSheet("font-weight:bold;")
 
         self.addWidget(self.img_lbl)
         self.addStretch()
 
         self.action_tabs = ActionTabs(self)
         self.addWidget(self.action_tabs)
-        # todo: hide it
         self.action_tabs.setVisible(False)
 
-        button_l = QHBoxLayout()
-        button_l.setAlignment(Qt.AlignCenter)
-        button_l.addWidget(upload_btn)
-        button_l.addWidget(reset_btn)
-        button_l.addWidget(save_btn)
+        btn_layout = QHBoxLayout()
+        btn_layout.setAlignment(Qt.AlignCenter)
+        btn_layout.addWidget(upload_btn)
+        btn_layout.addWidget(reset_btn)
+        btn_layout.addWidget(save_btn)
 
-        self.addLayout(button_l)
+        self.addLayout(btn_layout)
 
     def on_save(self):
         logger.debug("save")
@@ -178,7 +233,7 @@ class MainLayout(QVBoxLayout):
 
             for key, val in color_filter.ColorFilters.filters.items():
                 imgc = img_commander.ImgCommander(file_name)
-                imgc.resize(100, 100)
+                imgc.resize(120, 120)
                 imgc.filter(key)
                 img = imgc.get_img()
 

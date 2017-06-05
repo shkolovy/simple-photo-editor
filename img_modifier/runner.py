@@ -55,7 +55,7 @@ def init():
     if __debug__:
         # image.contrast(2)
         # image.brightness(0.5)
-        image.sharpness(5)
+        # image.sharpness(5)
         image.get_img().show()
 
 
