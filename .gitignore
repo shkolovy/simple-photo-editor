@@ -1,3 +1,5 @@
 /.idea
 /venv
 /temp
+__pycache__/
+*.py[cod]

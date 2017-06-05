@@ -6,8 +6,8 @@ from PIL import ImageDraw
 
 
 class ColorFilters:
-    items = ("sepia", "negative", "black_white")
-    SEPIA, NEGATIVE, BLACK_WHITE = items
+    filters = {"sepia": "Sepia", "negative": "Negative", "black_white": "Black & White"}
+    SEPIA, NEGATIVE, BLACK_WHITE = filters.keys()
 
 
 def _sepia(img):

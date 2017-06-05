@@ -1,8 +1,8 @@
 import sys
 
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import QCoreApplication, Qt
-from PyQt5.QtGui import QIcon, QPixmap
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPixmap
 
 from functools import partial
 
@@ -53,13 +53,52 @@ class AdjustingTab(QWidget):
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
-        some_lbl = QLabel('Hello tab1 Hello tab1 Hello tab1 Hello tab1 ', self)
+
+        contrast_lbl = QLabel('Contrast')
+        contrast_lbl.setAlignment(Qt.AlignCenter)
+
+        brightness_lbl = QLabel('Brightness')
+        brightness_lbl.setAlignment(Qt.AlignCenter)
+
+        sharpness_lbl = QLabel('Sharpness')
+        sharpness_lbl.setAlignment(Qt.AlignCenter)
+
+        self.contrast_slider = QSlider(Qt.Horizontal, self)
+        self.contrast_slider.setMinimum(-100)
+        self.contrast_slider.setMaximum(100)
+        self.contrast_slider.setValue(0)
+
+        self.brightness_slider = QSlider(Qt.Horizontal, self)
+        self.brightness_slider.setMinimum(0)
+        self.brightness_slider.setMaximum(20)
+        self.brightness_slider.setValue(0)
+        self.brightness_slider.sliderReleased.connect(self.on_brightness_slider_released)
+
+        self.sharpness_slider = QSlider(Qt.Horizontal, self)
+        self.sharpness_slider.setMinimum(-100)
+        self.sharpness_slider.setMaximum(100)
+        self.sharpness_slider.setValue(0)
 
         main_layout = QVBoxLayout()
         main_layout.setAlignment(Qt.AlignCenter)
-        main_layout.addWidget(some_lbl)
-        main_layout.addStretch()
+
+        main_layout.addWidget(contrast_lbl)
+        main_layout.addWidget(self.contrast_slider)
+
+        main_layout.addWidget(brightness_lbl)
+        main_layout.addWidget(self.brightness_slider)
+
+        main_layout.addWidget(sharpness_lbl)
+        main_layout.addWidget(self.sharpness_slider)
+
         self.setLayout(main_layout)
+
+    def on_brightness_slider_released(self):
+        logger.debug(self.brightness_slider.value())
+        self.parent.parent.IMG.brightness(self.brightness_slider.value())
+        img = self.parent.parent.IMG.get_img()
+        preview_pix = ImageQt.toqpixmap(img)
+        self.parent.parent.img_lbl.setPixmap(preview_pix)
 
 
 class FiltersTab(QWidget):
@@ -131,14 +170,16 @@ class MainLayout(QVBoxLayout):
             self.img_lbl.setPixmap(pix)
             self.action_tabs.setVisible(True)
 
+            self.IMG = img_commander.ImgCommander(file_name)
+            self.IMG.resize(200, 200)
 
             main_layout = QHBoxLayout()
             main_layout.setAlignment(Qt.AlignCenter)
 
-            for f in color_filter.ColorFilters.items:
+            for key, val in color_filter.ColorFilters.filters.items():
                 imgc = img_commander.ImgCommander(file_name)
                 imgc.resize(100, 100)
-                imgc.filter(f)
+                imgc.filter(key)
                 img = imgc.get_img()
 
                 preview_pix = ImageQt.toqpixmap(img)
@@ -146,14 +187,14 @@ class MainLayout(QVBoxLayout):
                 tab = self.action_tabs.filter_tab
                 some_lbl = QLabel()
                 some_lbl.setStyleSheet("border:1px solid #ccc;")
+                some_lbl.setToolTip('Apply <b>{0}</b> filter'.format(val))
                 some_lbl.setCursor(Qt.PointingHandCursor)
                 some_lbl.setScaledContents(True)
                 main_layout.addWidget(some_lbl)
                 some_lbl.setPixmap(preview_pix)
 
-                some_lbl.mousePressEvent = partial(tab.on_filter_select, f)
+                some_lbl.mousePressEvent = partial(tab.on_filter_select, key)
                 tab.setLayout(main_layout)
-
 
     def on_reset(self):
         logger.debug("reset")
