@@ -7,7 +7,7 @@ import logging
 
 import img_modifier.color_filter as cf
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 
 def get_img(path):

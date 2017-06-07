@@ -17,7 +17,7 @@ import logging
 
 from img_modifier import img_helper
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 
 def init():
@@ -29,9 +29,11 @@ def init():
         logger.error("-p can't be empty")
         raise ValueError("-p can't be empty")
 
+    logger.debug("run with params: {}".format(args))
+
     # transform arguments from console
     opts, rem = getopt.getopt(args, "p:", ["rotate=", "resize=", "color_filter="])
-    rotate = resize = color_filter = None
+    rotate_angle = resize = color_filter = None
 
     for opt, arg in opts:
         if opt == "-p":
@@ -53,17 +55,7 @@ def init():
         img = img_helper.color_filter(img, color_filter)
 
     if __debug__:
-        from PIL import Image, ImageEnhance
-
-        enhancer = ImageEnhance.Contrast(img)
-
-
-        iii = enhancer.enhance(1)
-
-
-
-
-        iii.show()
+        img.show()
 
 
 if __name__ == "__main__":

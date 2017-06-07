@@ -16,7 +16,6 @@ import logging
 
 logger = logging.getLogger()
 
-
 img_original = None
 img_output = None
 
