@@ -15,7 +15,7 @@ import getopt
 import sys
 import logging
 
-from img_modifier import img_commander
+from img_modifier import img_helper
 
 logger = logging.getLogger(__name__)
 
@@ -37,26 +37,33 @@ def init():
         if opt == "-p":
             path = arg
         elif opt == "--rotate":
-            rotate = int(arg)
+            rotate_angle = int(arg)
         elif opt == "--resize":
             resize = arg
         elif opt == "--color_filter":
             color_filter = arg
 
-    image = img_commander.ImgCommander(path)
-    if rotate:
-        image.rotate(rotate)
+    img = img_helper.get_img(path)
+    if rotate_angle:
+        img = img_helper.rotate(img, rotate_angle)
     if resize:
         w, h = map(int, arg.split(','))
-        image.resize(w, h)
+        img = img_helper.resize(img, w, h)
     if color_filter:
-        image.filter(color_filter)
+        img = img_helper.color_filter(img, color_filter)
 
     if __debug__:
-        # image.contrast(2)
-        # image.brightness(0.5)
-        # image.sharpness(5)
-        image.get_img().show()
+        from PIL import Image, ImageEnhance
+
+        enhancer = ImageEnhance.Contrast(img)
+
+
+        iii = enhancer.enhance(1)
+
+
+
+
+        iii.show()
 
 
 if __name__ == "__main__":

@@ -38,11 +38,14 @@ def _negative(img):
 
 
 def color_filter(img, filter_name):
+    img_copy = img.copy()
     if filter_name == ColorFilters.SEPIA:
-        _sepia(img)
+        _sepia(img_copy)
     elif filter_name == ColorFilters.NEGATIVE:
-        _negative(img)
+        _negative(img_copy)
     elif filter_name == ColorFilters.BLACK_WHITE:
-        _black_white(img)
+        _black_white(img_copy)
     else:
         raise ValueError("can't find filter {0}".format(filter_name))
+
+    return img_copy

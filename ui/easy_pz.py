@@ -6,7 +6,7 @@ from PyQt5.QtGui import QPixmap
 
 from functools import partial
 
-from img_modifier import img_commander
+from img_modifier import img_helper
 from img_modifier import color_filter
 
 from PIL import ImageQt
@@ -15,6 +15,23 @@ from logging.config import fileConfig
 import logging
 
 logger = logging.getLogger()
+
+
+img_original = None
+img_output = None
+
+operations = {
+    "color_filter": {
+        ""
+    },
+    "adjusting": {
+        "brightness": 0,
+        "contrast": 0,
+        "sharpness": 0
+    },
+    "flip_left": False,
+    "flip_top": False
+}
 
 
 class QVLine(QFrame):
@@ -44,20 +61,25 @@ class ActionTabs(QTabWidget):
 class RotationTab(QWidget):
     def __init__(self, parent):
         super().__init__()
+        self.parent = parent
 
         btn_size = (90, 50)
 
         rotate_left_btn = QPushButton("↺ 90°")
         rotate_left_btn.setMinimumSize(*btn_size)
+        rotate_left_btn.clicked.connect(self.on_rotate_left)
 
         rotate_right_btn = QPushButton("↻ 90°")
         rotate_right_btn.setMinimumSize(*btn_size)
+        rotate_right_btn.clicked.connect(self.on_rotate_right)
 
         flip_left_btn = QPushButton("⇆")
         flip_left_btn.setMinimumSize(*btn_size)
+        flip_left_btn.clicked.connect(self.on_flip_left)
 
         flip_top_btn = QPushButton("↑↓")
         flip_top_btn.setMinimumSize(*btn_size)
+        flip_top_btn.clicked.connect(self.on_flip_top)
 
         btn_layout = QHBoxLayout()
         btn_layout.setAlignment(Qt.AlignCenter)
@@ -69,11 +91,40 @@ class RotationTab(QWidget):
 
         self.setLayout(btn_layout)
 
+    def on_rotate_left(self):
+        logger.debug("rotate left")
+
+        global img_output
+        img_output = img_helper.rotate(img_output, 90)
+        self.parent.parent.place_preview_img(img_output)
+
+    def on_rotate_right(self):
+        logger.debug("rotate left")
+
+        global img_output
+        img_output = img_helper.rotate(img_output, -90)
+        self.parent.parent.place_preview_img(img_output)
+
+    def on_flip_left(self):
+        logger.debug("flip left-right")
+
+        global img_output
+        img_output = img_helper.flip_left(img_output)
+        self.parent.parent.place_preview_img(img_output)
+
+    def on_flip_top(self):
+        logger.debug("flip top-bottom")
+
+        global img_output
+        img_output = img_helper.flip_top(img_output)
+        self.parent.parent.place_preview_img(img_output)
+
 
 class ModificationTab(QWidget):
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
+
         some_lbl = QLabel('Hello tab1 Hello tab1 Hello tab1 Hello tab1 ', self)
 
         main_layout = QVBoxLayout()
@@ -136,22 +187,40 @@ class AdjustmentTab(QWidget):
 
         self.setLayout(main_layout)
 
+    def reset_sliders(self):
+        self.brightness_slider.setValue(0)
+        self.sharpness_slider.setValue(0)
+        self.contrast_slider.setValue(0)
+
     def on_brightness_slider_released(self):
-        logger.debug(self.brightness_slider.value())
+        logger.debug("brightness selected value: {}".format(self.brightness_slider.value()))
         self.brightness_slider.setToolTip(str(self.brightness_slider.value()))
 
-        # self.parent.parent.IMG.brightness(self.brightness_slider.value())
-        # img = self.parent.parent.IMG.get_img()
-        # preview_pix = ImageQt.toqpixmap(img)
-        # self.parent.parent.img_lbl.setPixmap(preview_pix)
+        factor = _get_converted_point(-100, 100, 0.5, 2, self.brightness_slider.value())
+        logger.debug("brightness factor: {}".format(factor))
+
+        img = img_helper.brightness(img_original, factor)
+        self.parent.parent.place_preview_img(img)
 
     def on_sharpness_slider_released(self):
         logger.debug(self.sharpness_slider.value())
         self.sharpness_slider.setToolTip(str(self.sharpness_slider.value()))
 
+        factor = _get_converted_point(-100, 100, 0, 2, self.sharpness_slider.value())
+        logger.debug("sharpness factor: {}".format(factor))
+
+        img = img_helper.sharpness(img_original, factor)
+        self.parent.parent.place_preview_img(img)
+
     def on_contrast_slider_released(self):
         logger.debug(self.contrast_slider.value())
         self.contrast_slider.setToolTip(str(self.contrast_slider.value()))
+
+        factor = _get_converted_point(-100, 100, 0.5, 1.5, self.contrast_slider.value())
+        logger.debug("contrast factor: {}".format(factor))
+
+        img = img_helper.contrast(img_original, factor)
+        self.parent.parent.place_preview_img(img)
 
 
 class FiltersTab(QWidget):
@@ -160,8 +229,16 @@ class FiltersTab(QWidget):
         self.parent = parent
 
     def on_filter_select(self, filter_name, e):
-        # self.parent.parent.img_lbl.setText(str(self))
-        print(filter_name)
+        logger.debug("apply color filter: {}".format(filter_name))
+
+        if filter_name != "none":
+            new_img = img_helper.color_filter(img_original, filter_name)
+        else:
+            new_img = img_original
+
+        global img_output
+        img_output = new_img
+        self.parent.parent.place_preview_img(new_img)
 
 
 class MainLayout(QVBoxLayout):
@@ -169,7 +246,7 @@ class MainLayout(QVBoxLayout):
         super().__init__()
         self.parent = parent
 
-        self.img_lbl = QLabel('Press Upload to upload an image')
+        self.img_lbl = QLabel('Press Upload to upload the image')
         self.img_lbl.setAlignment(Qt.AlignCenter)
 
         upload_btn = QPushButton("Upload")
@@ -177,17 +254,17 @@ class MainLayout(QVBoxLayout):
         upload_btn.clicked.connect(self.on_upload)
         upload_btn.setStyleSheet("font-weight:bold;")
 
-        reset_btn = QPushButton("Reset")
-        reset_btn.setMinimumWidth(100)
-        reset_btn.clicked.connect(self.on_reset)
-        reset_btn.setEnabled(False)
-        reset_btn.setStyleSheet("font-weight:bold;")
+        self.reset_btn = QPushButton("Reset")
+        self.reset_btn.setMinimumWidth(100)
+        self.reset_btn.clicked.connect(self.on_reset)
+        self.reset_btn.setEnabled(False)
+        self.reset_btn.setStyleSheet("font-weight:bold;")
 
-        save_btn = QPushButton("Save")
-        save_btn.setMinimumWidth(100)
-        save_btn.clicked.connect(self.on_save)
-        save_btn.setEnabled(False)
-        save_btn.setStyleSheet("font-weight:bold;")
+        self.save_btn = QPushButton("Save")
+        self.save_btn.setMinimumWidth(100)
+        self.save_btn.clicked.connect(self.on_save)
+        self.save_btn.setEnabled(False)
+        self.save_btn.setStyleSheet("font-weight:bold;")
 
         self.addWidget(self.img_lbl)
         self.addStretch()
@@ -199,18 +276,23 @@ class MainLayout(QVBoxLayout):
         btn_layout = QHBoxLayout()
         btn_layout.setAlignment(Qt.AlignCenter)
         btn_layout.addWidget(upload_btn)
-        btn_layout.addWidget(reset_btn)
-        btn_layout.addWidget(save_btn)
+        btn_layout.addWidget(self.reset_btn)
+        btn_layout.addWidget(self.save_btn)
 
         self.addLayout(btn_layout)
 
+    def place_preview_img(self, img):
+        preview_pix = ImageQt.toqpixmap(img)
+        self.img_lbl.setPixmap(preview_pix)
+
     def on_save(self):
-        logger.debug("save")
+        logger.debug("open save dialog")
         file_name, _ = QFileDialog.getSaveFileName(self.parent, "QFileDialog.getSaveFileName()", "",
-                                                   "All Files (*);;Images (*.png *.jpg)")
+                                                   "Images (*.png *.jpg)")
 
         if file_name:
-            logger.debug(file_name)
+            logger.debug("save output imgage to {}".format(file_name))
+            img_output.save(file_name)
 
     def on_upload(self):
         logger.debug("upload")
@@ -221,39 +303,67 @@ class MainLayout(QVBoxLayout):
             logger.debug(file_name)
 
             pix = QPixmap(file_name)
-            self.img_lbl.setScaledContents(True)
             self.img_lbl.setPixmap(pix)
+            self.img_lbl.setScaledContents(True)
             self.action_tabs.setVisible(True)
+            self.action_tabs.adjustment_tab.reset_sliders()
 
-            self.IMG = img_commander.ImgCommander(file_name)
-            self.IMG.resize(200, 200)
+            global img_original
+            img_original = ImageQt.fromqpixmap(pix)
+
+            global img_output
+            img_output = img_original.copy()
+
+            img_filter_thumb = img_helper.resize(img_original, 120, 120)
 
             main_layout = QHBoxLayout()
             main_layout.setAlignment(Qt.AlignCenter)
 
+            some_lbl = self.create_filter_thumb(img_filter_thumb, "none", "")
+            main_layout.addWidget(some_lbl)
+
             for key, val in color_filter.ColorFilters.filters.items():
-                imgc = img_commander.ImgCommander(file_name)
-                imgc.resize(120, 120)
-                imgc.filter(key)
-                img = imgc.get_img()
+                logger.debug("create img thumb for: {}".format(key))
 
-                preview_pix = ImageQt.toqpixmap(img)
-
-                tab = self.action_tabs.filter_tab
-                some_lbl = QLabel()
-                some_lbl.setStyleSheet("border:1px solid #ccc;")
-                some_lbl.setToolTip('Apply <b>{0}</b> filter'.format(val))
-                some_lbl.setCursor(Qt.PointingHandCursor)
-                some_lbl.setScaledContents(True)
+                some_lbl = self.create_filter_thumb(img_filter_thumb, key, val)
                 main_layout.addWidget(some_lbl)
-                some_lbl.setPixmap(preview_pix)
+                self.action_tabs.filter_tab.setLayout(main_layout)
 
-                some_lbl.mousePressEvent = partial(tab.on_filter_select, key)
-                tab.setLayout(main_layout)
+            self.reset_btn.setEnabled(True)
+            self.save_btn.setEnabled(True)
+
+    def create_filter_thumb(self, img_filter_thumb, filter_key, filter_name):
+        if filter_key != "none":
+            img_filter_preview = img_helper.color_filter(img_filter_thumb, filter_key)
+        else:
+            img_filter_preview = img_filter_thumb
+
+        preview_pix = ImageQt.toqpixmap(img_filter_preview)
+
+        some_lbl = QLabel()
+        some_lbl.setStyleSheet("border:1px solid #ccc;")
+
+        if filter_key != "none":
+            some_lbl.setToolTip('Apply <b>{0}</b> filter'.format(filter_name))
+        else:
+            some_lbl.setToolTip('No filter')
+
+        some_lbl.setCursor(Qt.PointingHandCursor)
+        some_lbl.setScaledContents(True)
+
+        some_lbl.setPixmap(preview_pix)
+
+        some_lbl.mousePressEvent = partial(self.action_tabs.filter_tab.on_filter_select, filter_key)
+
+        return some_lbl
 
     def on_reset(self):
-        logger.debug("reset")
-        # self.img_lbl.resize(self.img_lbl.width(), 100)
+        logger.debug("reset all")
+
+        global img_output
+        img_output = img_original.copy()
+        self.place_preview_img(img_original)
+        self.action_tabs.adjustment_tab.reset_sliders()
 
 
 class EasyPzUI(QWidget):
@@ -268,7 +378,7 @@ class EasyPzUI(QWidget):
         self.setMinimumSize(300, 300)
         self.setMaximumSize(900, 900)
         self.setGeometry(600, 600, 600, 600)
-        self.setWindowTitle('Easy Peasy')
+        self.setWindowTitle('Easy Peasy - Lemon Squeezy')
         self.center()
         self.show()
 
@@ -294,6 +404,20 @@ class EasyPzUI(QWidget):
 
     def resizeEvent(self, e):
         pass
+
+
+def _get_converted_point(user_p1, user_p2, p1, p2, x):
+    """
+    convert user ui slider selected value (x) to PIL value
+    user ui slider scale is -100 to 100, PIL scale is -1 to 2
+    example:
+     - user slected 50
+     - pil value is 1.25
+    """
+
+    # need to know how much x from p1 to p2
+    r = (x - user_p1) / (user_p2 - user_p1)
+    return p1 + r * (p2 - p1)
 
 
 if __name__ == '__main__':
