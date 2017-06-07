@@ -1,5 +1,7 @@
 """
-Load image, change it, save it
+Image helper
+Main module of the package
+All image operations should go thorough this module
 """
 
 from PIL import Image, ImageEnhance
@@ -10,8 +12,18 @@ import img_modifier.color_filter as cf
 logger = logging.getLogger()
 
 
+CONTRAST_FACTOR_MAX = 1.5
+CONTRAST_FACTOR_MIN = 0.5
+
+SHARPNESS_FACTOR_MAX = 3
+SHARPNESS_FACTOR_MIN = -1
+
+BRIGHTNESS_FACTOR_MAX = 1.5
+BRIGHTNESS_FACTOR_MIN = 0.5
+
+
 def get_img(path):
-    """return PIL.Image object"""
+    """Return PIL.Image object"""
 
     if path == "":
         logger.error("path is empty of has bad format")
@@ -25,34 +37,34 @@ def get_img(path):
 
 
 def resize(img, width, height):
-    """resize image"""
+    """Resize image"""
 
     return img.resize((width, height))
 
 
 def rotate(img, angle):
-    """rotate image"""
+    """Rotate image"""
 
     return img.rotate(angle, expand=True)
 
 
 def blur(img, point, spread):
-    """blur image"""
+    """Blur image"""
 
     # todo: add blur module
     pass
 
 
 def color_filter(img, filter_name):
-    """filter image"""
+    """Filter image"""
 
     return cf.color_filter(img, filter_name)
 
 
 def brightness(img, factor):
-    """adjust image brightness form 0.5-2 (1 - original)"""
+    """Adjust image brightness form 0.5-2 (1 - original)"""
 
-    if factor > 2 or factor < 0.5:
+    if factor > BRIGHTNESS_FACTOR_MAX or factor < BRIGHTNESS_FACTOR_MIN:
         raise ValueError("factor should be [0-2]")
 
     enhancer = ImageEnhance.Brightness(img)
@@ -60,9 +72,9 @@ def brightness(img, factor):
 
 
 def contrast(img, factor):
-    """adjust image contrast form 0.5-1.5 (1 - original)"""
+    """Adjust image contrast form 0.5-1.5 (1 - original)"""
 
-    if factor > 1.5 or factor < 0.5:
+    if factor > CONTRAST_FACTOR_MAX or factor < CONTRAST_FACTOR_MIN:
         raise ValueError("factor should be [0.5-1.5]")
 
     enhancer = ImageEnhance.Contrast(img)
@@ -70,9 +82,9 @@ def contrast(img, factor):
 
 
 def sharpness(img, factor):
-    """adjust image sharpness form 0-2 (1 - original)"""
+    """Adjust image sharpness form 0-2 (1 - original)"""
 
-    if factor > 2 or factor < 0:
+    if factor > SHARPNESS_FACTOR_MAX or factor < SHARPNESS_FACTOR_MIN:
         raise ValueError("factor should be [0.5-1.5]")
 
     enhancer = ImageEnhance.Sharpness(img)
@@ -80,10 +92,14 @@ def sharpness(img, factor):
 
 
 def flip_left(img):
+    """Flip left to right"""
+
     return img.transpose(Image.FLIP_LEFT_RIGHT)
 
 
 def flip_top(img):
+    """Flip top to bottom"""
+
     return img.transpose(Image.FLIP_TOP_BOTTOM)
 
 
@@ -96,7 +112,7 @@ def save(img, path):
 def open_img(img):
     """
     Open image in temporary file
-    use it only for debug!
+    !use it only for debug!
     """
 
     img.open()

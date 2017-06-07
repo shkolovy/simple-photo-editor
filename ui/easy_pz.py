@@ -33,7 +33,23 @@ class OPERATIONS:
         CONTRAST = 0
 
 
+def _get_converted_point(user_p1, user_p2, p1, p2, x):
+    """
+    convert user ui slider selected value (x) to PIL value
+    user ui slider scale is -100 to 100, PIL scale is -1 to 2
+    example:
+     - user slected 50
+     - pil value is 1.25
+    """
+
+    # need to know how much x from p1 to p2
+    r = (x - user_p1) / (user_p2 - user_p1)
+    return p1 + r * (p2 - p1)
+
+
 class QVLine(QFrame):
+    """Vertical line"""
+
     def __init__(self):
         super(QVLine, self).__init__()
         self.setFrameShape(QFrame.VLine)
@@ -41,11 +57,13 @@ class QVLine(QFrame):
 
 
 class ActionTabs(QTabWidget):
+    """Action tabs widget"""
+
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
         self.filter_tab = FiltersTab(self)
-        self.adjustment_tab = AdjustmentTab(self)
+        self.adjustment_tab = AdjustingTab(self)
         self.modification_tab = ModificationTab(self)
         self.rotation_tab = RotationTab(self)
 
@@ -58,6 +76,8 @@ class ActionTabs(QTabWidget):
 
 
 class RotationTab(QWidget):
+    """Rotation tab widget"""
+
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
@@ -120,6 +140,8 @@ class RotationTab(QWidget):
 
 
 class ModificationTab(QWidget):
+    """Modification tab widget"""
+
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
@@ -137,10 +159,16 @@ class ModificationTab(QWidget):
         print(111)
 
 
-class AdjustmentTab(QWidget):
+class AdjustingTab(QWidget):
+    """Adjusting tab widget"""
+
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
+
+        self.slider_min = -100
+        self.slider_max = 100
+        self.slider_def = 0
 
         contrast_lbl = QLabel("Contrast")
         contrast_lbl.setAlignment(Qt.AlignCenter)
@@ -152,25 +180,25 @@ class AdjustmentTab(QWidget):
         sharpness_lbl.setAlignment(Qt.AlignCenter)
 
         self.contrast_slider = QSlider(Qt.Horizontal, self)
-        self.contrast_slider.setMinimum(-100)
-        self.contrast_slider.setMaximum(100)
-        self.contrast_slider.setValue(0)
+        self.contrast_slider.setMinimum(self.slider_min)
+        self.contrast_slider.setMaximum(self.slider_max)
+        self.contrast_slider.setValue(self.slider_def)
         self.contrast_slider.sliderReleased.connect(self.on_contrast_slider_released)
-        self.contrast_slider.setToolTip(str(0))
+        self.contrast_slider.setToolTip(str(self.slider_def))
 
         self.brightness_slider = QSlider(Qt.Horizontal, self)
-        self.brightness_slider.setMinimum(-100)
-        self.brightness_slider.setMaximum(100)
-        self.brightness_slider.setValue(0)
+        self.brightness_slider.setMinimum(self.slider_min)
+        self.brightness_slider.setMaximum(self.slider_max)
+        self.brightness_slider.setValue(self.slider_def)
         self.brightness_slider.sliderReleased.connect(self.on_brightness_slider_released)
-        self.brightness_slider.setToolTip(str(0))
+        self.brightness_slider.setToolTip(str(self.slider_def))
 
         self.sharpness_slider = QSlider(Qt.Horizontal, self)
-        self.sharpness_slider.setMinimum(-100)
-        self.sharpness_slider.setMaximum(100)
-        self.sharpness_slider.setValue(0)
+        self.sharpness_slider.setMinimum(self.slider_min)
+        self.sharpness_slider.setMaximum(self.slider_max)
+        self.sharpness_slider.setValue(self.slider_def)
         self.sharpness_slider.sliderReleased.connect(self.on_sharpness_slider_released)
-        self.sharpness_slider.setToolTip(str(0))
+        self.sharpness_slider.setToolTip(str(self.slider_def))
 
         main_layout = QVBoxLayout()
         main_layout.setAlignment(Qt.AlignCenter)
@@ -187,9 +215,9 @@ class AdjustmentTab(QWidget):
         self.setLayout(main_layout)
 
     def reset_sliders(self):
-        self.brightness_slider.setValue(0)
-        self.sharpness_slider.setValue(0)
-        self.contrast_slider.setValue(0)
+        self.brightness_slider.setValue(self.slider_def)
+        self.sharpness_slider.setValue(self.slider_def)
+        self.contrast_slider.setValue(self.slider_def)
 
     def apply_adjusting(self):
         """
@@ -218,7 +246,7 @@ class AdjustmentTab(QWidget):
         logger.debug(f"brightness selected value: {self.brightness_slider.value()}")
         self.brightness_slider.setToolTip(str(self.brightness_slider.value()))
 
-        factor = _get_converted_point(-100, 100, 0.5, 2, self.brightness_slider.value())
+        factor = _get_converted_point(-100, 100, img_helper.BRIGHTNESS_FACTOR_MIN, img_helper.BRIGHTNESS_FACTOR_MAX, self.brightness_slider.value())
         logger.debug(f"brightness factor: {factor}")
 
         OPERATIONS.ADJUSTING.BRIGHTNESS = factor
@@ -229,7 +257,7 @@ class AdjustmentTab(QWidget):
         logger.debug(self.sharpness_slider.value())
         self.sharpness_slider.setToolTip(str(self.sharpness_slider.value()))
 
-        factor = _get_converted_point(-100, 100, 0, 2, self.sharpness_slider.value())
+        factor = _get_converted_point(-100, 100, img_helper.SHARPNESS_FACTOR_MIN, img_helper.SHARPNESS_FACTOR_MAX, self.sharpness_slider.value())
         logger.debug(f"sharpness factor: {factor}")
 
         OPERATIONS.ADJUSTING.SHARPNESS = factor
@@ -240,7 +268,7 @@ class AdjustmentTab(QWidget):
         logger.debug(self.contrast_slider.value())
         self.contrast_slider.setToolTip(str(self.contrast_slider.value()))
 
-        factor = _get_converted_point(-100, 100, 0.5, 1.5, self.contrast_slider.value())
+        factor = _get_converted_point(-100, 100, img_helper.CONTRAST_FACTOR_MIN, img_helper.CONTRAST_FACTOR_MAX, self.contrast_slider.value())
         logger.debug(f"contrast factor: {factor}")
 
         OPERATIONS.ADJUSTING.CONTRAST = factor
@@ -249,6 +277,8 @@ class AdjustmentTab(QWidget):
 
 
 class FiltersTab(QWidget):
+    """Color filters widget"""
+
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
@@ -267,6 +297,8 @@ class FiltersTab(QWidget):
 
 
 class MainLayout(QVBoxLayout):
+    """Main layout"""
+
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
@@ -392,6 +424,8 @@ class MainLayout(QVBoxLayout):
 
 
 class EasyPzUI(QWidget):
+    """Main widget"""
+
     def __init__(self):
         super().__init__()
 
@@ -429,20 +463,6 @@ class EasyPzUI(QWidget):
 
     def resizeEvent(self, e):
         pass
-
-
-def _get_converted_point(user_p1, user_p2, p1, p2, x):
-    """
-    convert user ui slider selected value (x) to PIL value
-    user ui slider scale is -100 to 100, PIL scale is -1 to 2
-    example:
-     - user slected 50
-     - pil value is 1.25
-    """
-
-    # need to know how much x from p1 to p2
-    r = (x - user_p1) / (user_p2 - user_p1)
-    return p1 + r * (p2 - p1)
 
 
 if __name__ == '__main__':
