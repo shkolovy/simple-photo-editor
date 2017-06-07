@@ -1,8 +1,9 @@
 import sys
+import ntpath
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import *
 
 from functools import partial
 
@@ -31,6 +32,19 @@ class OPERATIONS:
         BRIGHTNESS = 0
         SHARPNESS = 0
         CONTRAST = 0
+
+    @staticmethod
+    def reset():
+        OPERATIONS.ADJUSTING.BRIGHTNESS = 0
+        OPERATIONS.ADJUSTING.SHARPNESS = 0
+        OPERATIONS.ADJUSTING.CONTRAST = 0
+
+        OPERATIONS.FLIP_LEFT = False
+        OPERATIONS.FLIP_RIGHT = False
+        OPERATIONS.ROTATION_ANGLE = 0
+
+        OPERATIONS.COLOR_FILTER = None
+
 
 
 def _get_converted_point(user_p1, user_p2, p1, p2, x):
@@ -286,14 +300,24 @@ class FiltersTab(QWidget):
     def on_filter_select(self, filter_name, e):
         logger.debug(f"apply color filter: {filter_name}")
 
+        # self.parent.parent.parent.loading()
         if filter_name != "none":
             new_img = img_helper.color_filter(img_original, filter_name)
         else:
             new_img = img_original
 
+        OPERATIONS.COLOR_FILTER = filter_name
+        self.toggle_thumbs()
+
         global img_output
         img_output = new_img
         self.parent.parent.place_preview_img(new_img)
+        # self.parent.parent.parent.loading(False)
+
+    def toggle_thumbs(self):
+        for thumb in self.findChildren(QLabel):
+            color = "#3893F4" if thumb.name == OPERATIONS.COLOR_FILTER else "#ccc"
+            thumb.setStyleSheet(f"border:2px solid {color};")
 
 
 class MainLayout(QVBoxLayout):
@@ -305,6 +329,8 @@ class MainLayout(QVBoxLayout):
 
         self.img_lbl = QLabel('Press Upload to upload the image')
         self.img_lbl.setAlignment(Qt.AlignCenter)
+
+        self.file_name = None
 
         upload_btn = QPushButton("Upload")
         upload_btn.setMinimumWidth(100)
@@ -344,22 +370,26 @@ class MainLayout(QVBoxLayout):
 
     def on_save(self):
         logger.debug("open save dialog")
-        file_name, _ = QFileDialog.getSaveFileName(self.parent, "QFileDialog.getSaveFileName()", "",
-                                                   "Images (*.png *.jpg)")
+        new_img_path, _ = QFileDialog.getSaveFileName(self.parent, "QFileDialog.getSaveFileName()",
+                                                      f"ez_pz_{self.file_name}",
+                                                      "Images (*.png *.jpg)")
 
-        if file_name:
-            logger.debug(f"save output image to {file_name}")
-            img_output.save(file_name)
+        if new_img_path:
+            logger.debug(f"save output image to {new_img_path}")
+            img_output.save(new_img_path)
 
     def on_upload(self):
         logger.debug("upload")
-        file_name, _ = QFileDialog.getOpenFileName(self.parent, "Open image", "/Users",
-                                                   "Images (*.png *jpg)")
+        img_path, _ = QFileDialog.getOpenFileName(self.parent, "Open image",
+                                                  "/Users",
+                                                  "Images (*.png *jpg)")
 
-        if file_name:
-            logger.debug(file_name)
+        if img_path:
+            logger.debug(f"open file {img_path}")
 
-            pix = QPixmap(file_name)
+            self.file_name = ntpath.basename(img_path)
+
+            pix = QPixmap(img_path)
             self.img_lbl.setPixmap(pix)
             self.img_lbl.setScaledContents(True)
             self.action_tabs.setVisible(True)
@@ -398,7 +428,8 @@ class MainLayout(QVBoxLayout):
         preview_pix = ImageQt.toqpixmap(img_filter_preview)
 
         some_lbl = QLabel()
-        some_lbl.setStyleSheet("border:1px solid #ccc;")
+        some_lbl.name = filter_key
+        some_lbl.setStyleSheet("border:2px solid #ccc;")
 
         if filter_key != "none":
             some_lbl.setToolTip(f"Apply <b>{filter_name}</b> filter")
@@ -419,6 +450,8 @@ class MainLayout(QVBoxLayout):
 
         global img_output
         img_output = img_original.copy()
+
+        OPERATIONS.reset()
         self.place_preview_img(img_original)
         self.action_tabs.adjustment_tab.reset_sliders()
 
@@ -432,6 +465,7 @@ class EasyPzUI(QWidget):
         self.has_changes = False
 
         self.main_layout = MainLayout(self)
+
         self.setLayout(self.main_layout)
 
         self.setMinimumSize(300, 300)
@@ -439,7 +473,15 @@ class EasyPzUI(QWidget):
         self.setGeometry(600, 600, 600, 600)
         self.setWindowTitle('Easy Peasy - Lemon Squeezy')
         self.center()
+        self.loading_overlay = LoadingOverlay(self)
+        self.loading_overlay.hide()
         self.show()
+
+    def loading(self, status=True):
+        if status:
+            self.loading_overlay.resize(self.size())
+
+        self.loading_overlay.setVisible(status)
 
     def center(self):
         """align window center"""
@@ -462,8 +504,27 @@ class EasyPzUI(QWidget):
                 event.ignore()
 
     def resizeEvent(self, e):
-        pass
+        if self.loading_overlay.isVisible():
+            self.loading_overlay.resize(e.size())
 
+
+class LoadingOverlay(QWidget):
+    def __init__(self, parent=None):
+        super(LoadingOverlay, self).__init__(parent)
+
+        palette = QPalette(self.palette())
+        palette.setColor(palette.Background, Qt.transparent)
+
+        self.setPalette(palette)
+
+    def paintEvent(self, event):
+        painter = QPainter()
+        painter.begin(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.fillRect(event.rect(), QBrush(QColor(255, 255, 255, 127)))
+        painter.drawLine(self.width() / 8, self.height() / 8, 7 * self.width() / 8, 7 * self.height() / 8)
+        painter.drawLine(self.width() / 8, 7 * self.height() / 8, 7 * self.width() / 8, self.height() / 8)
+        painter.setPen(QPen(Qt.NoPen))
 
 if __name__ == '__main__':
     fileConfig('logging_config.ini')
