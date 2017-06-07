@@ -19,18 +19,18 @@ logger = logging.getLogger()
 img_original = None
 img_output = None
 
-operations = {
-    "color_filter": {
-        ""
-    },
-    "adjusting": {
-        "brightness": 0,
-        "contrast": 0,
-        "sharpness": 0
-    },
-    "flip_left": False,
-    "flip_top": False
-}
+
+class OPERATIONS:
+    COLOR_FILTER = None
+
+    FLIP_LEFT = False
+    FLIP_RIGHT = False
+    ROTATION_ANGLE = 0
+
+    class ADJUSTING:
+        BRIGHTNESS = 0
+        SHARPNESS = 0
+        CONTRAST = 0
 
 
 class QVLine(QFrame):
@@ -191,35 +191,61 @@ class AdjustmentTab(QWidget):
         self.sharpness_slider.setValue(0)
         self.contrast_slider.setValue(0)
 
+    def apply_adjusting(self):
+        """
+        apply adjusting filters all together without changing initial img
+        """
+
+        b = OPERATIONS.ADJUSTING.BRIGHTNESS
+        c = OPERATIONS.ADJUSTING.CONTRAST
+        s = OPERATIONS.ADJUSTING.SHARPNESS
+
+        logger.debug(f"apply adjusting b:{b}, c:{c}, s:{s}")
+
+        img = img_original
+        if b != 0:
+            img = img_helper.brightness(img, b)
+
+        if c != 0:
+            img = img_helper.contrast(img, c)
+
+        if s != 0:
+            img = img_helper.sharpness(img, s)
+
+        self.parent.parent.place_preview_img(img)
+
     def on_brightness_slider_released(self):
-        logger.debug("brightness selected value: {}".format(self.brightness_slider.value()))
+        logger.debug(f"brightness selected value: {self.brightness_slider.value()}")
         self.brightness_slider.setToolTip(str(self.brightness_slider.value()))
 
         factor = _get_converted_point(-100, 100, 0.5, 2, self.brightness_slider.value())
-        logger.debug("brightness factor: {}".format(factor))
+        logger.debug(f"brightness factor: {factor}")
 
-        img = img_helper.brightness(img_original, factor)
-        self.parent.parent.place_preview_img(img)
+        OPERATIONS.ADJUSTING.BRIGHTNESS = factor
+
+        self.apply_adjusting()
 
     def on_sharpness_slider_released(self):
         logger.debug(self.sharpness_slider.value())
         self.sharpness_slider.setToolTip(str(self.sharpness_slider.value()))
 
         factor = _get_converted_point(-100, 100, 0, 2, self.sharpness_slider.value())
-        logger.debug("sharpness factor: {}".format(factor))
+        logger.debug(f"sharpness factor: {factor}")
 
-        img = img_helper.sharpness(img_original, factor)
-        self.parent.parent.place_preview_img(img)
+        OPERATIONS.ADJUSTING.SHARPNESS = factor
+
+        self.apply_adjusting()
 
     def on_contrast_slider_released(self):
         logger.debug(self.contrast_slider.value())
         self.contrast_slider.setToolTip(str(self.contrast_slider.value()))
 
         factor = _get_converted_point(-100, 100, 0.5, 1.5, self.contrast_slider.value())
-        logger.debug("contrast factor: {}".format(factor))
+        logger.debug(f"contrast factor: {factor}")
 
-        img = img_helper.contrast(img_original, factor)
-        self.parent.parent.place_preview_img(img)
+        OPERATIONS.ADJUSTING.CONTRAST = factor
+
+        self.apply_adjusting()
 
 
 class FiltersTab(QWidget):
@@ -228,7 +254,7 @@ class FiltersTab(QWidget):
         self.parent = parent
 
     def on_filter_select(self, filter_name, e):
-        logger.debug("apply color filter: {}".format(filter_name))
+        logger.debug(f"apply color filter: {filter_name}")
 
         if filter_name != "none":
             new_img = img_helper.color_filter(img_original, filter_name)
@@ -290,7 +316,7 @@ class MainLayout(QVBoxLayout):
                                                    "Images (*.png *.jpg)")
 
         if file_name:
-            logger.debug("save output imgage to {}".format(file_name))
+            logger.debug(f"save output image to {file_name}")
             img_output.save(file_name)
 
     def on_upload(self):
@@ -322,7 +348,7 @@ class MainLayout(QVBoxLayout):
             main_layout.addWidget(some_lbl)
 
             for key, val in color_filter.ColorFilters.filters.items():
-                logger.debug("create img thumb for: {}".format(key))
+                logger.debug(f"create img thumb for: {key}")
 
                 some_lbl = self.create_filter_thumb(img_filter_thumb, key, val)
                 main_layout.addWidget(some_lbl)
@@ -343,7 +369,7 @@ class MainLayout(QVBoxLayout):
         some_lbl.setStyleSheet("border:1px solid #ccc;")
 
         if filter_key != "none":
-            some_lbl.setToolTip('Apply <b>{0}</b> filter'.format(filter_name))
+            some_lbl.setToolTip(f"Apply <b>{filter_name}</b> filter")
         else:
             some_lbl.setToolTip('No filter')
 

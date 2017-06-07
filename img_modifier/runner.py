@@ -29,7 +29,7 @@ def init():
         logger.error("-p can't be empty")
         raise ValueError("-p can't be empty")
 
-    logger.debug("run with params: {}".format(args))
+    logger.debug(f"run with params: {args}")
 
     # transform arguments from console
     opts, rem = getopt.getopt(args, "p:", ["rotate=", "resize=", "color_filter="])

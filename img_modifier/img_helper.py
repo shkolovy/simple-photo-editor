@@ -20,8 +20,8 @@ def get_img(path):
     try:
         return Image.open(path)
     except Exception:
-        logger.error("can't open the file {0}".format(path))
-        raise ValueError("can't open the file {0}".format(path))
+        logger.error(f"can't open the file {path}")
+        raise ValueError(f"can't open the file {path}")
 
 
 def resize(img, width, height):
@@ -33,7 +33,7 @@ def resize(img, width, height):
 def rotate(img, angle):
     """rotate image"""
 
-    return img.rotate(angle)
+    return img.rotate(angle, expand=True)
 
 
 def blur(img, point, spread):

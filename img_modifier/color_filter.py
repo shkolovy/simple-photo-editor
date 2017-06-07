@@ -49,7 +49,7 @@ def color_filter(img, filter_name):
     elif filter_name == ColorFilters.BLACK_WHITE:
         _black_white(img_copy)
     else:
-        logger.debug("can't find filter {0}".format(filter_name))
-        raise ValueError("can't find filter {0}".format(filter_name))
+        logger.error(f"can't find filter {filter_name}")
+        raise ValueError(f"can't find filter {filter_name}")
 
     return img_copy
