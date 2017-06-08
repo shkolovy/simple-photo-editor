@@ -45,16 +45,34 @@ class OPERATIONS:
 
         OPERATIONS.COLOR_FILTER = None
 
+    @staticmethod
+    def has_changes():
+        if OPERATIONS.COLOR_FILTER or OPERATIONS.FLIP_LEFT\
+                or OPERATIONS.FLIP_RIGHT or OPERATIONS.ROTATION_ANGLE\
+                or OPERATIONS.ADJUSTING.CONTRAST or OPERATIONS.ADJUSTING.BRIGHTNESS\
+                or OPERATIONS.ADJUSTING.SHARPNESS:
+            return True
+        else:
+            return False
+
 
 THUMB_BORDER_COLOR_ACTIVE = "#3893F4"
 THUMB_BORDER_COLOR = "#ccc"
-BTN_MIN_WIDTH = 100
+BTN_MIN_WIDTH = 120
 ROTATION_BTN_SIZE = (90, 50)
-THUMB_SIZE = (120, 120)
+THUMB_SIZE = 120
 
 SLIDER_MIN_VAL = -100
 SLIDER_MAX_VAL = 100
 SLIDER_DEF_VAL = 0
+
+
+def _get_ratio_height(width, height, r_width):
+    return int(r_width/width*height)
+
+
+def _get_ratio_width(width, height, r_height):
+    return int(r_height/height*width)
 
 
 def _get_converted_point(user_p1, user_p2, p1, p2, x):
@@ -73,6 +91,7 @@ def _get_converted_point(user_p1, user_p2, p1, p2, x):
 
 class QVLine(QFrame):
     """Vertical line"""
+    """Vertical line"""
 
     def __init__(self):
         super(QVLine, self).__init__()
@@ -86,7 +105,7 @@ class ActionTabs(QTabWidget):
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
-        # todo: rename it
+
         self.filters_tab = FiltersTab(self)
         self.adjustment_tab = AdjustingTab(self)
         self.modification_tab = ModificationTab(self)
@@ -176,18 +195,15 @@ class ModificationTab(QWidget):
         self.height_lbl.setFixedWidth(100)
 
         self.width_box = QLineEdit(self)
-        self.width_box.textChanged.connect(self.on_width_change)
+        self.width_box.textEdited.connect(self.on_width_change)
         self.width_box.setMaximumWidth(100)
 
         self.height_box = QLineEdit(self)
-        self.height_box.textChanged.connect(self.on_height_change)
+        self.height_box.textEdited.connect(self.on_height_change)
         self.height_box.setMaximumWidth(100)
 
-        self.unit_combo = QComboBox(self)
-        self.unit_combo.addItem("px")
-        self.unit_combo.addItem("%")
-        self.unit_combo.setMaximumWidth(50)
-        self.unit_combo.currentIndexChanged.connect(self.on_unit_change)
+        self.unit_lbl = QLabel("px")
+        self.unit_lbl.setMaximumWidth(50)
 
         self.ratio_check = QCheckBox('aspect ratio', self)
         self.ratio_check.stateChanged.connect(self.on_ratio_change)
@@ -199,7 +215,7 @@ class ModificationTab(QWidget):
         width_layout = QHBoxLayout()
         width_layout.addWidget(self.width_box)
         width_layout.addWidget(self.height_box)
-        width_layout.addWidget(self.unit_combo)
+        width_layout.addWidget(self.unit_lbl)
 
         apply_layout = QHBoxLayout()
         apply_layout.addWidget(self.apply_btn)
@@ -224,14 +240,19 @@ class ModificationTab(QWidget):
         self.width_box.setText(str(img_original.width))
         self.height_box.setText(str(img_original.height))
 
-    def on_unit_change(self, e):
-        logger.debug("unit change")
-
     def on_width_change(self, e):
-        print(self.ratio_check.isChecked())
+        logger.debug(f"type width {self.width_box.text()}")
+
+        if self.ratio_check.isChecked():
+            r_height = _get_ratio_height(img_original.width, img_original.height, int(self.width_box.text()))
+            self.height_box.setText(str(r_height))
 
     def on_height_change(self, e):
-        print(self.ratio_check.isChecked())
+        logger.debug(f"type height {self.height_box.text()}")
+
+        if self.ratio_check.isChecked():
+            r_width = _get_ratio_width(img_original.width, img_original.height, int(self.height_box.text()))
+            self.width_box.setText(str(r_width))
 
     def on_ratio_change(self, e):
         logger.debug("ratio change")
@@ -386,8 +407,7 @@ class FiltersTab(QWidget):
             thumb_lbl.setToolTip('No filter')
 
         thumb_lbl.setCursor(Qt.PointingHandCursor)
-        thumb_lbl.setScaledContents(True)
-
+        thumb_lbl.setFixedSize(THUMB_SIZE, THUMB_SIZE)
         thumb_lbl.mousePressEvent = partial(self.on_filter_select, name)
 
         self.main_layout.addWidget(thumb_lbl)
@@ -422,7 +442,9 @@ class MainLayout(QVBoxLayout):
         super().__init__()
         self.parent = parent
 
-        self.img_lbl = QLabel('Press Upload to upload the image')
+        self.img_lbl = QLabel("Press <b>'Upload'</b> to to start<br>"
+                              "<div style='margin: 30px 0'><img src='logo.png' /></div>"
+                              "<b>made with</b> <span style='color:red'>&#10084;</span>")
         self.img_lbl.setAlignment(Qt.AlignCenter)
 
         self.file_name = None
@@ -496,7 +518,14 @@ class MainLayout(QVBoxLayout):
             global img_output
             img_output = img_original.copy()
 
-            img_filter_thumb = img_helper.resize(img_original, *THUMB_SIZE)
+            if img_original.width < img_original.height:
+                w = THUMB_SIZE
+                h = _get_ratio_height(img_original.width, img_original.height, w)
+            else:
+                h = THUMB_SIZE
+                w = _get_ratio_width(img_original.width, img_original.height, h)
+
+            img_filter_thumb = img_helper.resize(img_original, w, h)
 
             for thumb in self.action_tabs.filters_tab.findChildren(QLabel):
                 if thumb.name != "none":
@@ -529,10 +558,7 @@ class EasyPzUI(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.has_changes = False
-
         self.main_layout = MainLayout(self)
-
         self.setLayout(self.main_layout)
 
         self.setMinimumSize(300, 300)
@@ -560,9 +586,10 @@ class EasyPzUI(QWidget):
 
     def closeEvent(self, event):
         logger.debug("close")
-        if self.has_changes:
-            reply = QMessageBox.question(self, 'You have unsaved changes',
-                                         "Are you sure?", QMessageBox.Yes |
+
+        if OPERATIONS.has_changes():
+            reply = QMessageBox.question(self, "",
+                                         "You have unsaved changes<br>Are you sure?", QMessageBox.Yes |
                                          QMessageBox.No, QMessageBox.No)
 
             if reply == QMessageBox.Yes:
