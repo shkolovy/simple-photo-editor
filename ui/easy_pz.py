@@ -46,6 +46,16 @@ class OPERATIONS:
         OPERATIONS.COLOR_FILTER = None
 
 
+THUMB_BORDER_COLOR_ACTIVE = "#3893F4"
+THUMB_BORDER_COLOR = "#ccc"
+BTN_MIN_WIDTH = 100
+ROTATION_BTN_SIZE = (90, 50)
+THUMB_SIZE = (120, 120)
+
+SLIDER_MIN_VAL = -100
+SLIDER_MAX_VAL = 100
+SLIDER_DEF_VAL = 0
+
 
 def _get_converted_point(user_p1, user_p2, p1, p2, x):
     """
@@ -76,12 +86,13 @@ class ActionTabs(QTabWidget):
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
-        self.filter_tab = FiltersTab(self)
+        # todo: rename it
+        self.filters_tab = FiltersTab(self)
         self.adjustment_tab = AdjustingTab(self)
         self.modification_tab = ModificationTab(self)
         self.rotation_tab = RotationTab(self)
 
-        self.addTab(self.filter_tab, "Filters")
+        self.addTab(self.filters_tab, "Filters")
         self.addTab(self.adjustment_tab, "Adjusting")
         self.addTab(self.modification_tab, "Modification")
         self.addTab(self.rotation_tab, "Rotation")
@@ -96,22 +107,20 @@ class RotationTab(QWidget):
         super().__init__()
         self.parent = parent
 
-        btn_size = (90, 50)
-
         rotate_left_btn = QPushButton("↺ 90°")
-        rotate_left_btn.setMinimumSize(*btn_size)
+        rotate_left_btn.setMinimumSize(*ROTATION_BTN_SIZE)
         rotate_left_btn.clicked.connect(self.on_rotate_left)
 
         rotate_right_btn = QPushButton("↻ 90°")
-        rotate_right_btn.setMinimumSize(*btn_size)
+        rotate_right_btn.setMinimumSize(*ROTATION_BTN_SIZE)
         rotate_right_btn.clicked.connect(self.on_rotate_right)
 
         flip_left_btn = QPushButton("⇆")
-        flip_left_btn.setMinimumSize(*btn_size)
+        flip_left_btn.setMinimumSize(*ROTATION_BTN_SIZE)
         flip_left_btn.clicked.connect(self.on_flip_left)
 
         flip_top_btn = QPushButton("↑↓")
-        flip_top_btn.setMinimumSize(*btn_size)
+        flip_top_btn.setMinimumSize(*ROTATION_BTN_SIZE)
         flip_top_btn.clicked.connect(self.on_flip_top)
 
         btn_layout = QHBoxLayout()
@@ -160,17 +169,79 @@ class ModificationTab(QWidget):
         super().__init__()
         self.parent = parent
 
-        some_lbl = QLabel('Hello tab1 Hello tab1 Hello tab1 Hello tab1 ', self)
+        self.width_lbl = QLabel('width:', self)
+        self.width_lbl.setFixedWidth(100)
+
+        self.height_lbl = QLabel('height:', self)
+        self.height_lbl.setFixedWidth(100)
+
+        self.width_box = QLineEdit(self)
+        self.width_box.textChanged.connect(self.on_width_change)
+        self.width_box.setMaximumWidth(100)
+
+        self.height_box = QLineEdit(self)
+        self.height_box.textChanged.connect(self.on_height_change)
+        self.height_box.setMaximumWidth(100)
+
+        self.unit_combo = QComboBox(self)
+        self.unit_combo.addItem("px")
+        self.unit_combo.addItem("%")
+        self.unit_combo.setMaximumWidth(50)
+        self.unit_combo.currentIndexChanged.connect(self.on_unit_change)
+
+        self.ratio_check = QCheckBox('aspect ratio', self)
+        self.ratio_check.stateChanged.connect(self.on_ratio_change)
+
+        self.apply_btn = QPushButton("Apply")
+        self.apply_btn.setFixedWidth(90)
+        self.apply_btn.clicked.connect(self.on_apply)
+
+        width_layout = QHBoxLayout()
+        width_layout.addWidget(self.width_box)
+        width_layout.addWidget(self.height_box)
+        width_layout.addWidget(self.unit_combo)
+
+        apply_layout = QHBoxLayout()
+        apply_layout.addWidget(self.apply_btn)
+        apply_layout.setAlignment(Qt.AlignRight)
+
+        lbl_layout = QHBoxLayout()
+        lbl_layout.setAlignment(Qt.AlignLeft)
+        lbl_layout.addWidget(self.width_lbl)
+        lbl_layout.addWidget(self.height_lbl)
 
         main_layout = QVBoxLayout()
         main_layout.setAlignment(Qt.AlignCenter)
-        main_layout.addWidget(some_lbl)
-        main_layout.addStretch()
+
+        main_layout.addLayout(lbl_layout)
+        main_layout.addLayout(width_layout)
+        main_layout.addWidget(self.ratio_check)
+        main_layout.addLayout(apply_layout)
+
         self.setLayout(main_layout)
 
-    def on_click(self):
-        self.parent.parent.img_lbl.setText("ccccc")
-        print(111)
+    def set_boxes(self):
+        self.width_box.setText(str(img_original.width))
+        self.height_box.setText(str(img_original.height))
+
+    def on_unit_change(self, e):
+        logger.debug("unit change")
+
+    def on_width_change(self, e):
+        print(self.ratio_check.isChecked())
+
+    def on_height_change(self, e):
+        print(self.ratio_check.isChecked())
+
+    def on_ratio_change(self, e):
+        logger.debug("ratio change")
+
+    def on_apply(self, e):
+        logger.debug("apply")
+
+        w, h = int(self.width_box.text()), int(self.height_box.text())
+        res_img = img_helper.resize(img_output, w, h)
+        self.parent.parent.place_preview_img(res_img)
 
 
 class AdjustingTab(QWidget):
@@ -179,10 +250,6 @@ class AdjustingTab(QWidget):
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
-
-        self.slider_min = -100
-        self.slider_max = 100
-        self.slider_def = 0
 
         contrast_lbl = QLabel("Contrast")
         contrast_lbl.setAlignment(Qt.AlignCenter)
@@ -194,25 +261,22 @@ class AdjustingTab(QWidget):
         sharpness_lbl.setAlignment(Qt.AlignCenter)
 
         self.contrast_slider = QSlider(Qt.Horizontal, self)
-        self.contrast_slider.setMinimum(self.slider_min)
-        self.contrast_slider.setMaximum(self.slider_max)
-        self.contrast_slider.setValue(self.slider_def)
+        self.contrast_slider.setMinimum(SLIDER_MIN_VAL)
+        self.contrast_slider.setMaximum(SLIDER_MAX_VAL)
         self.contrast_slider.sliderReleased.connect(self.on_contrast_slider_released)
-        self.contrast_slider.setToolTip(str(self.slider_def))
+        self.contrast_slider.setToolTip(str(SLIDER_MAX_VAL))
 
         self.brightness_slider = QSlider(Qt.Horizontal, self)
-        self.brightness_slider.setMinimum(self.slider_min)
-        self.brightness_slider.setMaximum(self.slider_max)
-        self.brightness_slider.setValue(self.slider_def)
+        self.brightness_slider.setMinimum(SLIDER_MIN_VAL)
+        self.brightness_slider.setMaximum(SLIDER_MAX_VAL)
         self.brightness_slider.sliderReleased.connect(self.on_brightness_slider_released)
-        self.brightness_slider.setToolTip(str(self.slider_def))
+        self.brightness_slider.setToolTip(str(SLIDER_MAX_VAL))
 
         self.sharpness_slider = QSlider(Qt.Horizontal, self)
-        self.sharpness_slider.setMinimum(self.slider_min)
-        self.sharpness_slider.setMaximum(self.slider_max)
-        self.sharpness_slider.setValue(self.slider_def)
+        self.sharpness_slider.setMinimum(SLIDER_MIN_VAL)
+        self.sharpness_slider.setMaximum(SLIDER_MAX_VAL)
         self.sharpness_slider.sliderReleased.connect(self.on_sharpness_slider_released)
-        self.sharpness_slider.setToolTip(str(self.slider_def))
+        self.sharpness_slider.setToolTip(str(SLIDER_MAX_VAL))
 
         main_layout = QVBoxLayout()
         main_layout.setAlignment(Qt.AlignCenter)
@@ -226,12 +290,13 @@ class AdjustingTab(QWidget):
         main_layout.addWidget(sharpness_lbl)
         main_layout.addWidget(self.sharpness_slider)
 
+        self.reset_sliders()
         self.setLayout(main_layout)
 
     def reset_sliders(self):
-        self.brightness_slider.setValue(self.slider_def)
-        self.sharpness_slider.setValue(self.slider_def)
-        self.contrast_slider.setValue(self.slider_def)
+        self.brightness_slider.setValue(SLIDER_DEF_VAL)
+        self.sharpness_slider.setValue(SLIDER_DEF_VAL)
+        self.contrast_slider.setValue(SLIDER_DEF_VAL)
 
     def apply_adjusting(self):
         """
@@ -260,7 +325,7 @@ class AdjustingTab(QWidget):
         logger.debug(f"brightness selected value: {self.brightness_slider.value()}")
         self.brightness_slider.setToolTip(str(self.brightness_slider.value()))
 
-        factor = _get_converted_point(-100, 100, img_helper.BRIGHTNESS_FACTOR_MIN, img_helper.BRIGHTNESS_FACTOR_MAX, self.brightness_slider.value())
+        factor = _get_converted_point(SLIDER_MIN_VAL, SLIDER_MAX_VAL, img_helper.BRIGHTNESS_FACTOR_MIN, img_helper.BRIGHTNESS_FACTOR_MAX, self.brightness_slider.value())
         logger.debug(f"brightness factor: {factor}")
 
         OPERATIONS.ADJUSTING.BRIGHTNESS = factor
@@ -271,7 +336,8 @@ class AdjustingTab(QWidget):
         logger.debug(self.sharpness_slider.value())
         self.sharpness_slider.setToolTip(str(self.sharpness_slider.value()))
 
-        factor = _get_converted_point(-100, 100, img_helper.SHARPNESS_FACTOR_MIN, img_helper.SHARPNESS_FACTOR_MAX, self.sharpness_slider.value())
+        factor = _get_converted_point(SLIDER_MIN_VAL, SLIDER_MAX_VAL, img_helper.SHARPNESS_FACTOR_MIN,
+                                      img_helper.SHARPNESS_FACTOR_MAX, self.sharpness_slider.value())
         logger.debug(f"sharpness factor: {factor}")
 
         OPERATIONS.ADJUSTING.SHARPNESS = factor
@@ -282,7 +348,8 @@ class AdjustingTab(QWidget):
         logger.debug(self.contrast_slider.value())
         self.contrast_slider.setToolTip(str(self.contrast_slider.value()))
 
-        factor = _get_converted_point(-100, 100, img_helper.CONTRAST_FACTOR_MIN, img_helper.CONTRAST_FACTOR_MAX, self.contrast_slider.value())
+        factor = _get_converted_point(SLIDER_MIN_VAL, SLIDER_MAX_VAL, img_helper.CONTRAST_FACTOR_MIN,
+                                      img_helper.CONTRAST_FACTOR_MAX, self.contrast_slider.value())
         logger.debug(f"contrast factor: {factor}")
 
         OPERATIONS.ADJUSTING.CONTRAST = factor
@@ -296,6 +363,34 @@ class FiltersTab(QWidget):
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
+
+        self.main_layout = QHBoxLayout()
+        self.main_layout.setAlignment(Qt.AlignCenter)
+
+        self.add_filter_thumb("none")
+        for key, val in color_filter.ColorFilters.filters.items():
+            self.add_filter_thumb(key, val)
+
+        self.setLayout(self.main_layout)
+
+    def add_filter_thumb(self, name, title=""):
+        logger.debug(f"create lbl thumb for: {name}")
+
+        thumb_lbl = QLabel()
+        thumb_lbl.name = name
+        thumb_lbl.setStyleSheet("border:2px solid #ccc;")
+
+        if name != "none":
+            thumb_lbl.setToolTip(f"Apply <b>{title}</b> filter")
+        else:
+            thumb_lbl.setToolTip('No filter')
+
+        thumb_lbl.setCursor(Qt.PointingHandCursor)
+        thumb_lbl.setScaledContents(True)
+
+        thumb_lbl.mousePressEvent = partial(self.on_filter_select, name)
+
+        self.main_layout.addWidget(thumb_lbl)
 
     def on_filter_select(self, filter_name, e):
         logger.debug(f"apply color filter: {filter_name}")
@@ -316,7 +411,7 @@ class FiltersTab(QWidget):
 
     def toggle_thumbs(self):
         for thumb in self.findChildren(QLabel):
-            color = "#3893F4" if thumb.name == OPERATIONS.COLOR_FILTER else "#ccc"
+            color = THUMB_BORDER_COLOR_ACTIVE if thumb.name == OPERATIONS.COLOR_FILTER else THUMB_BORDER_COLOR
             thumb.setStyleSheet(f"border:2px solid {color};")
 
 
@@ -333,18 +428,18 @@ class MainLayout(QVBoxLayout):
         self.file_name = None
 
         upload_btn = QPushButton("Upload")
-        upload_btn.setMinimumWidth(100)
+        upload_btn.setMinimumWidth(BTN_MIN_WIDTH)
         upload_btn.clicked.connect(self.on_upload)
         upload_btn.setStyleSheet("font-weight:bold;")
 
         self.reset_btn = QPushButton("Reset")
-        self.reset_btn.setMinimumWidth(100)
+        self.reset_btn.setMinimumWidth(BTN_MIN_WIDTH)
         self.reset_btn.clicked.connect(self.on_reset)
         self.reset_btn.setEnabled(False)
         self.reset_btn.setStyleSheet("font-weight:bold;")
 
         self.save_btn = QPushButton("Save")
-        self.save_btn.setMinimumWidth(100)
+        self.save_btn.setMinimumWidth(BTN_MIN_WIDTH)
         self.save_btn.clicked.connect(self.on_save)
         self.save_btn.setEnabled(False)
         self.save_btn.setStyleSheet("font-weight:bold;")
@@ -401,49 +496,20 @@ class MainLayout(QVBoxLayout):
             global img_output
             img_output = img_original.copy()
 
-            img_filter_thumb = img_helper.resize(img_original, 120, 120)
+            img_filter_thumb = img_helper.resize(img_original, *THUMB_SIZE)
 
-            main_layout = QHBoxLayout()
-            main_layout.setAlignment(Qt.AlignCenter)
+            for thumb in self.action_tabs.filters_tab.findChildren(QLabel):
+                if thumb.name != "none":
+                    img_filter_preview = img_helper.color_filter(img_filter_thumb, thumb.name)
+                else:
+                    img_filter_preview = img_filter_thumb
 
-            some_lbl = self.create_filter_thumb(img_filter_thumb, "none", "")
-            main_layout.addWidget(some_lbl)
-
-            for key, val in color_filter.ColorFilters.filters.items():
-                logger.debug(f"create img thumb for: {key}")
-
-                some_lbl = self.create_filter_thumb(img_filter_thumb, key, val)
-                main_layout.addWidget(some_lbl)
-                self.action_tabs.filter_tab.setLayout(main_layout)
+                preview_pix = ImageQt.toqpixmap(img_filter_preview)
+                thumb.setPixmap(preview_pix)
 
             self.reset_btn.setEnabled(True)
             self.save_btn.setEnabled(True)
-
-    def create_filter_thumb(self, img_filter_thumb, filter_key, filter_name):
-        if filter_key != "none":
-            img_filter_preview = img_helper.color_filter(img_filter_thumb, filter_key)
-        else:
-            img_filter_preview = img_filter_thumb
-
-        preview_pix = ImageQt.toqpixmap(img_filter_preview)
-
-        some_lbl = QLabel()
-        some_lbl.name = filter_key
-        some_lbl.setStyleSheet("border:2px solid #ccc;")
-
-        if filter_key != "none":
-            some_lbl.setToolTip(f"Apply <b>{filter_name}</b> filter")
-        else:
-            some_lbl.setToolTip('No filter')
-
-        some_lbl.setCursor(Qt.PointingHandCursor)
-        some_lbl.setScaledContents(True)
-
-        some_lbl.setPixmap(preview_pix)
-
-        some_lbl.mousePressEvent = partial(self.action_tabs.filter_tab.on_filter_select, filter_key)
-
-        return some_lbl
+            self.action_tabs.modification_tab.set_boxes()
 
     def on_reset(self):
         logger.debug("reset all")
@@ -454,6 +520,7 @@ class MainLayout(QVBoxLayout):
         OPERATIONS.reset()
         self.place_preview_img(img_original)
         self.action_tabs.adjustment_tab.reset_sliders()
+        self.action_tabs.modification_tab.set_boxes()
 
 
 class EasyPzUI(QWidget):
