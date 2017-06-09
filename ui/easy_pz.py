@@ -17,8 +17,10 @@ import logging
 
 logger = logging.getLogger()
 
-img_original = None
-img_output = None
+# original img, can't be modified
+_img_original = None
+_img_preview = None
+
 
 # constants
 THUMB_BORDER_COLOR_ACTIVE = "#3893F4"
@@ -36,8 +38,10 @@ class OPERATIONS:
     COLOR_FILTER = None
 
     FLIP_LEFT = False
-    FLIP_RIGHT = False
+    FLIP_TOP = False
     ROTATION_ANGLE = 0
+
+    SIZE = None
 
     class ADJUSTING:
         BRIGHTNESS = 0
@@ -50,8 +54,10 @@ class OPERATIONS:
         OPERATIONS.ADJUSTING.SHARPNESS = 0
         OPERATIONS.ADJUSTING.CONTRAST = 0
 
+        OPERATIONS.SIZE = None
+
         OPERATIONS.FLIP_LEFT = False
-        OPERATIONS.FLIP_RIGHT = False
+        OPERATIONS.FLIP_TOP = False
         OPERATIONS.ROTATION_ANGLE = 0
 
         OPERATIONS.COLOR_FILTER = None
@@ -59,12 +65,15 @@ class OPERATIONS:
     @staticmethod
     def has_changes():
         if OPERATIONS.COLOR_FILTER or OPERATIONS.FLIP_LEFT\
-                or OPERATIONS.FLIP_RIGHT or OPERATIONS.ROTATION_ANGLE\
+                or OPERATIONS.FLIP_TOP or OPERATIONS.ROTATION_ANGLE\
                 or OPERATIONS.ADJUSTING.CONTRAST or OPERATIONS.ADJUSTING.BRIGHTNESS\
                 or OPERATIONS.ADJUSTING.SHARPNESS:
             return True
         else:
             return False
+
+    def __str__(self):
+        return 'implement it!!!!!!!!!!!'
 
 
 def _get_ratio_height(width, height, r_width):
@@ -80,23 +89,44 @@ def _get_converted_point(user_p1, user_p2, p1, p2, x):
     convert user ui slider selected value (x) to PIL value
     user ui slider scale is -100 to 100, PIL scale is -1 to 2
     example:
-     - user slected 50
-     - pil value is 1.25
+     - user selected 50
+     - PIL value is 1.25
     """
 
-    # need to know how much x from p1 to p2
     r = (x - user_p1) / (user_p2 - user_p1)
     return p1 + r * (p2 - p1)
 
 
-class QVLine(QFrame):
-    """Vertical line"""
-    """Vertical line"""
+def _get_img_with_all_operations():
+    logger.debug(OPERATIONS)
 
-    def __init__(self):
-        super(QVLine, self).__init__()
-        self.setFrameShape(QFrame.VLine)
-        self.setFrameShadow(QFrame.Sunken)
+    b = OPERATIONS.ADJUSTING.BRIGHTNESS
+    c = OPERATIONS.ADJUSTING.CONTRAST
+    s = OPERATIONS.ADJUSTING.SHARPNESS
+
+    img = _img_preview
+    if b != 0:
+        img = img_helper.brightness(img, b)
+
+    if c != 0:
+        img = img_helper.contrast(img, c)
+
+    if s != 0:
+        img = img_helper.sharpness(img, s)
+
+    if OPERATIONS.ROTATION_ANGLE:
+        img = img_helper.rotate(img, OPERATIONS.ROTATION_ANGLE)
+
+    if OPERATIONS.FLIP_LEFT:
+        img = img_helper.flip_left(img)
+
+    if OPERATIONS.FLIP_TOP:
+        img = img_helper.flip_top(img)
+
+    if OPERATIONS.SIZE:
+        img = img_helper.resize(img, *OPERATIONS.SIZE)
+
+    return img
 
 
 class ActionTabs(QTabWidget):
@@ -173,30 +203,34 @@ class RotationTab(QWidget):
     def on_rotate_left(self):
         logger.debug("rotate left")
 
-        global img_output
-        img_output = img_helper.rotate(img_output, 90)
-        self.parent.parent.place_preview_img(img_output)
+        OPERATIONS.ROTATION_ANGLE = 0 if OPERATIONS.ROTATION_ANGLE == 270 else OPERATIONS.ROTATION_ANGLE + 90
+        # global _img_preview
+        # _img_preview = img_helper.rotate(_img_preview, 90)
+        self.parent.parent.place_preview_img()
 
     def on_rotate_right(self):
         logger.debug("rotate left")
 
-        global img_output
-        img_output = img_helper.rotate(img_output, -90)
-        self.parent.parent.place_preview_img(img_output)
+        OPERATIONS.ROTATION_ANGLE = 0 if OPERATIONS.ROTATION_ANGLE == -270 else OPERATIONS.ROTATION_ANGLE - 90
+        # global _img_preview
+        # _img_preview = img_helper.rotate(_img_preview, -90)
+        self.parent.parent.place_preview_img()
 
     def on_flip_left(self):
         logger.debug("flip left-right")
 
-        global img_output
-        img_output = img_helper.flip_left(img_output)
-        self.parent.parent.place_preview_img(img_output)
+        OPERATIONS.FLIP_LEFT = not OPERATIONS.FLIP_LEFT
+        # global _img_preview
+        # _img_preview = img_helper.flip_left(_img_preview)
+        self.parent.parent.place_preview_img()
 
     def on_flip_top(self):
         logger.debug("flip top-bottom")
 
-        global img_output
-        img_output = img_helper.flip_top(img_output)
-        self.parent.parent.place_preview_img(img_output)
+        OPERATIONS.FLIP_TOP = not OPERATIONS.FLIP_TOP
+        # global _img_preview
+        # img_output = img_helper.flip_top(_img_preview)
+        self.parent.parent.place_preview_img()
 
 
 class ModificationTab(QWidget):
@@ -255,21 +289,21 @@ class ModificationTab(QWidget):
         self.setLayout(main_layout)
 
     def set_boxes(self):
-        self.width_box.setText(str(img_original.width))
-        self.height_box.setText(str(img_original.height))
+        self.width_box.setText(str(_img_original.width))
+        self.height_box.setText(str(_img_original.height))
 
     def on_width_change(self, e):
         logger.debug(f"type width {self.width_box.text()}")
 
         if self.ratio_check.isChecked():
-            r_height = _get_ratio_height(img_original.width, img_original.height, int(self.width_box.text()))
+            r_height = _get_ratio_height(_img_original.width, _img_original.height, int(self.width_box.text()))
             self.height_box.setText(str(r_height))
 
     def on_height_change(self, e):
         logger.debug(f"type height {self.height_box.text()}")
 
         if self.ratio_check.isChecked():
-            r_width = _get_ratio_width(img_original.width, img_original.height, int(self.height_box.text()))
+            r_width = _get_ratio_width(_img_original.width, _img_original.height, int(self.height_box.text()))
             self.width_box.setText(str(r_width))
 
     def on_ratio_change(self, e):
@@ -278,9 +312,10 @@ class ModificationTab(QWidget):
     def on_apply(self, e):
         logger.debug("apply")
 
-        w, h = int(self.width_box.text()), int(self.height_box.text())
-        res_img = img_helper.resize(img_output, w, h)
-        self.parent.parent.place_preview_img(res_img)
+        OPERATIONS.SIZE = int(self.width_box.text()), int(self.height_box.text())
+
+        self.parent.parent.update_img_size_lbl()
+        self.parent.parent.place_preview_img()
 
 
 class AdjustingTab(QWidget):
@@ -337,29 +372,6 @@ class AdjustingTab(QWidget):
         self.sharpness_slider.setValue(SLIDER_DEF_VAL)
         self.contrast_slider.setValue(SLIDER_DEF_VAL)
 
-    def apply_adjusting(self):
-        """
-        apply adjusting filters all together without changing initial img
-        """
-
-        b = OPERATIONS.ADJUSTING.BRIGHTNESS
-        c = OPERATIONS.ADJUSTING.CONTRAST
-        s = OPERATIONS.ADJUSTING.SHARPNESS
-
-        logger.debug(f"apply adjusting b:{b}, c:{c}, s:{s}")
-
-        img = img_original
-        if b != 0:
-            img = img_helper.brightness(img, b)
-
-        if c != 0:
-            img = img_helper.contrast(img, c)
-
-        if s != 0:
-            img = img_helper.sharpness(img, s)
-
-        self.parent.parent.place_preview_img(img)
-
     def on_brightness_slider_released(self):
         logger.debug(f"brightness selected value: {self.brightness_slider.value()}")
         self.brightness_slider.setToolTip(str(self.brightness_slider.value()))
@@ -369,7 +381,7 @@ class AdjustingTab(QWidget):
 
         OPERATIONS.ADJUSTING.BRIGHTNESS = factor
 
-        self.apply_adjusting()
+        self.parent.parent.place_preview_img()
 
     def on_sharpness_slider_released(self):
         logger.debug(self.sharpness_slider.value())
@@ -381,7 +393,7 @@ class AdjustingTab(QWidget):
 
         OPERATIONS.ADJUSTING.SHARPNESS = factor
 
-        self.apply_adjusting()
+        self.parent.parent.place_preview_img()
 
     def on_contrast_slider_released(self):
         logger.debug(self.contrast_slider.value())
@@ -393,7 +405,7 @@ class AdjustingTab(QWidget):
 
         OPERATIONS.ADJUSTING.CONTRAST = factor
 
-        self.apply_adjusting()
+        self.parent.parent.place_preview_img()
 
 
 class FiltersTab(QWidget):
@@ -433,19 +445,16 @@ class FiltersTab(QWidget):
     def on_filter_select(self, filter_name, e):
         logger.debug(f"apply color filter: {filter_name}")
 
-        # self.parent.parent.parent.loading()
+        global _img_preview
         if filter_name != "none":
-            new_img = img_helper.color_filter(img_original, filter_name)
+            _img_preview = img_helper.color_filter(_img_original, filter_name)
         else:
-            new_img = img_original
+            _img_preview = _img_original.copy()
 
         OPERATIONS.COLOR_FILTER = filter_name
         self.toggle_thumbs()
 
-        global img_output
-        img_output = new_img
-        self.parent.parent.place_preview_img(new_img)
-        # self.parent.parent.parent.loading(False)
+        self.parent.parent.place_preview_img()
 
     def toggle_thumbs(self):
         for thumb in self.findChildren(QLabel):
@@ -504,7 +513,9 @@ class MainLayout(QVBoxLayout):
 
         self.addLayout(btn_layout)
 
-    def place_preview_img(self, img):
+    def place_preview_img(self):
+        img = _get_img_with_all_operations()
+
         preview_pix = ImageQt.toqpixmap(img)
         self.img_lbl.setPixmap(preview_pix)
 
@@ -516,7 +527,9 @@ class MainLayout(QVBoxLayout):
 
         if new_img_path:
             logger.debug(f"save output image to {new_img_path}")
-            img_output.save(new_img_path)
+
+            img = _get_img_with_all_operations()
+            img.save(new_img_path)
 
     def on_upload(self):
         logger.debug("upload")
@@ -535,22 +548,22 @@ class MainLayout(QVBoxLayout):
             self.action_tabs.setVisible(True)
             self.action_tabs.adjustment_tab.reset_sliders()
 
-            global img_original
-            img_original = ImageQt.fromqpixmap(pix)
+            global _img_original
+            _img_original = ImageQt.fromqpixmap(pix)
 
             self.update_img_size_lbl()
 
-            global img_output
-            img_output = img_original.copy()
-
-            if img_original.width < img_original.height:
+            if _img_original.width < _img_original.height:
                 w = THUMB_SIZE
-                h = _get_ratio_height(img_original.width, img_original.height, w)
+                h = _get_ratio_height(_img_original.width, _img_original.height, w)
             else:
                 h = THUMB_SIZE
-                w = _get_ratio_width(img_original.width, img_original.height, h)
+                w = _get_ratio_width(_img_original.width, _img_original.height, h)
 
-            img_filter_thumb = img_helper.resize(img_original, w, h)
+            img_filter_thumb = img_helper.resize(_img_original, w, h)
+
+            global _img_preview
+            _img_preview = _img_original.copy()
 
             for thumb in self.action_tabs.filters_tab.findChildren(QLabel):
                 if thumb.name != "none":
@@ -566,20 +579,24 @@ class MainLayout(QVBoxLayout):
             self.action_tabs.modification_tab.set_boxes()
 
     def update_img_size_lbl(self):
+        logger.debug("update img size lbl")
+
         self.img_size_lbl.setText(f"<span style='font-size:11px'>"
-                                  f"image size {img_original.width} × {img_original.height}"
+                                  f"image size {OPERATIONS.SIZE[0] if OPERATIONS.SIZE else _img_original.width} × "
+                                  f"{OPERATIONS.SIZE[1] if OPERATIONS.SIZE else _img_original.height}"
                                   f"</span>")
 
     def on_reset(self):
         logger.debug("reset all")
 
-        global img_output
-        img_output = img_original.copy()
+        global _img_preview
+        _img_preview = _img_original.copy()
 
         OPERATIONS.reset()
-        self.place_preview_img(img_original)
+        self.place_preview_img()
         self.action_tabs.adjustment_tab.reset_sliders()
         self.action_tabs.modification_tab.set_boxes()
+        self.update_img_size_lbl()
 
 
 class EasyPzUI(QWidget):
@@ -596,15 +613,7 @@ class EasyPzUI(QWidget):
         self.setGeometry(600, 600, 600, 600)
         self.setWindowTitle('Easy Peasy - Lemon Squeezy')
         self.center()
-        self.loading_overlay = LoadingOverlay(self)
-        self.loading_overlay.hide()
         self.show()
-
-    def loading(self, status=True):
-        if status:
-            self.loading_overlay.resize(self.size())
-
-        self.loading_overlay.setVisible(status)
 
     def center(self):
         """align window center"""
@@ -628,27 +637,17 @@ class EasyPzUI(QWidget):
                 event.ignore()
 
     def resizeEvent(self, e):
-        if self.loading_overlay.isVisible():
-            self.loading_overlay.resize(e.size())
+        pass
 
 
-class LoadingOverlay(QWidget):
-    def __init__(self, parent=None):
-        super(LoadingOverlay, self).__init__(parent)
+class QVLine(QFrame):
+    """Vertical line"""
 
-        palette = QPalette(self.palette())
-        palette.setColor(palette.Background, Qt.transparent)
+    def __init__(self):
+        super(QVLine, self).__init__()
+        self.setFrameShape(QFrame.VLine)
+        self.setFrameShadow(QFrame.Sunken)
 
-        self.setPalette(palette)
-
-    def paintEvent(self, event):
-        painter = QPainter()
-        painter.begin(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        painter.fillRect(event.rect(), QBrush(QColor(255, 255, 255, 127)))
-        painter.drawLine(self.width() / 8, self.height() / 8, 7 * self.width() / 8, 7 * self.height() / 8)
-        painter.drawLine(self.width() / 8, 7 * self.height() / 8, 7 * self.width() / 8, self.height() / 8)
-        painter.setPen(QPen(Qt.NoPen))
 
 if __name__ == '__main__':
     fileConfig('logging_config.ini')
