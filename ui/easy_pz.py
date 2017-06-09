@@ -20,6 +20,17 @@ logger = logging.getLogger()
 img_original = None
 img_output = None
 
+# constants
+THUMB_BORDER_COLOR_ACTIVE = "#3893F4"
+THUMB_BORDER_COLOR = "#ccc"
+BTN_MIN_WIDTH = 120
+ROTATION_BTN_SIZE = (70, 30)
+THUMB_SIZE = 120
+
+SLIDER_MIN_VAL = -100
+SLIDER_MAX_VAL = 100
+SLIDER_DEF_VAL = 0
+
 
 class OPERATIONS:
     COLOR_FILTER = None
@@ -54,17 +65,6 @@ class OPERATIONS:
             return True
         else:
             return False
-
-
-THUMB_BORDER_COLOR_ACTIVE = "#3893F4"
-THUMB_BORDER_COLOR = "#ccc"
-BTN_MIN_WIDTH = 120
-ROTATION_BTN_SIZE = (90, 50)
-THUMB_SIZE = 120
-
-SLIDER_MIN_VAL = -100
-SLIDER_MAX_VAL = 100
-SLIDER_DEF_VAL = 0
 
 
 def _get_ratio_height(width, height, r_width):
@@ -142,6 +142,19 @@ class RotationTab(QWidget):
         flip_top_btn.setMinimumSize(*ROTATION_BTN_SIZE)
         flip_top_btn.clicked.connect(self.on_flip_top)
 
+        rotate_lbl = QLabel("Rotate")
+        rotate_lbl.setAlignment(Qt.AlignCenter)
+        rotate_lbl.setFixedWidth(140)
+
+        flip_lbl = QLabel("Flip")
+        flip_lbl.setAlignment(Qt.AlignCenter)
+        flip_lbl.setFixedWidth(140)
+
+        lbl_layout = QHBoxLayout()
+        lbl_layout.setAlignment(Qt.AlignCenter)
+        lbl_layout.addWidget(rotate_lbl)
+        lbl_layout.addWidget(flip_lbl)
+
         btn_layout = QHBoxLayout()
         btn_layout.setAlignment(Qt.AlignCenter)
         btn_layout.addWidget(rotate_left_btn)
@@ -150,7 +163,12 @@ class RotationTab(QWidget):
         btn_layout.addWidget(flip_left_btn)
         btn_layout.addWidget(flip_top_btn)
 
-        self.setLayout(btn_layout)
+        main_layout = QVBoxLayout()
+        main_layout.setAlignment(Qt.AlignCenter)
+        main_layout.addLayout(lbl_layout)
+        main_layout.addLayout(btn_layout)
+
+        self.setLayout(main_layout)
 
     def on_rotate_left(self):
         logger.debug("rotate left")
@@ -449,6 +467,10 @@ class MainLayout(QVBoxLayout):
 
         self.file_name = None
 
+        self.img_size_lbl = None
+        self.img_size_lbl = QLabel()
+        self.img_size_lbl.setAlignment(Qt.AlignCenter)
+
         upload_btn = QPushButton("Upload")
         upload_btn.setMinimumWidth(BTN_MIN_WIDTH)
         upload_btn.clicked.connect(self.on_upload)
@@ -467,6 +489,7 @@ class MainLayout(QVBoxLayout):
         self.save_btn.setStyleSheet("font-weight:bold;")
 
         self.addWidget(self.img_lbl)
+        self.addWidget(self.img_size_lbl)
         self.addStretch()
 
         self.action_tabs = ActionTabs(self)
@@ -515,6 +538,8 @@ class MainLayout(QVBoxLayout):
             global img_original
             img_original = ImageQt.fromqpixmap(pix)
 
+            self.update_img_size_lbl()
+
             global img_output
             img_output = img_original.copy()
 
@@ -539,6 +564,11 @@ class MainLayout(QVBoxLayout):
             self.reset_btn.setEnabled(True)
             self.save_btn.setEnabled(True)
             self.action_tabs.modification_tab.set_boxes()
+
+    def update_img_size_lbl(self):
+        self.img_size_lbl.setText(f"<span style='font-size:11px'>"
+                                  f"image size {img_original.width} × {img_original.height}"
+                                  f"</span>")
 
     def on_reset(self):
         logger.debug("reset all")

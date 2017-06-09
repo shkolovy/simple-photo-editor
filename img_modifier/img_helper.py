@@ -11,7 +11,7 @@ import img_modifier.color_filter as cf
 
 logger = logging.getLogger()
 
-
+# constants
 CONTRAST_FACTOR_MAX = 1.5
 CONTRAST_FACTOR_MIN = 0.5
 
@@ -48,11 +48,11 @@ def rotate(img, angle):
     return img.rotate(angle, expand=True)
 
 
-def blur(img, point, spread):
-    """Blur image"""
-
-    # todo: add blur module
-    pass
+# def blur(img, point, spread):
+#     """Blur image"""
+#
+#     # todo: add blur module
+#     pass
 
 
 def color_filter(img, filter_name):

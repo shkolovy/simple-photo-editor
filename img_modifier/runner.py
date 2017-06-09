@@ -1,7 +1,8 @@
 """
 Command line usage:
     python3 runner.py [-p <path>]
-    [--rotate=<angle>] [--resize=<width,height>] [--color_filter=<filter_name>] [--flip_top] [--flip_left] [--rotate=<angle>]
+    [--rotate=<angle>] [--resize=<width,height>] [--color_filter=<filter_name>]
+    [--flip_top] [--flip_left] [--rotate=<angle>]
 
     example: python3 runner.py -p temp.jpg --rotate=45 --resize=200,300 --flip_top
 
@@ -38,6 +39,7 @@ def init():
     opts, rem = getopt.getopt(args, "p:", ["rotate=", "resize=", "color_filter=", "flip_top", "flip_left"])
     rotate_angle = resize = color_filter = flip_top = flip_left = None
 
+    path = None
     for opt, arg in opts:
         if opt == "-p":
             path = arg
@@ -52,12 +54,15 @@ def init():
         elif opt == "--flip_left":
             flip_left = arg
 
+    if not path:
+        raise ValueError("No path")
+
     img = img_helper.get_img(path)
     if rotate_angle:
         img = img_helper.rotate(img, rotate_angle)
 
     if resize:
-        w, h = map(int, arg.split(','))
+        w, h = map(int, resize.split(','))
         img = img_helper.resize(img, w, h)
 
     if color_filter:
