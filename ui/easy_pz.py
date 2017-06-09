@@ -21,7 +21,6 @@ logger = logging.getLogger()
 _img_original = None
 _img_preview = None
 
-
 # constants
 THUMB_BORDER_COLOR_ACTIVE = "#3893F4"
 THUMB_BORDER_COLOR = "#ccc"
@@ -34,46 +33,46 @@ SLIDER_MAX_VAL = 100
 SLIDER_DEF_VAL = 0
 
 
-class OPERATIONS:
-    COLOR_FILTER = None
+class Operations:
+    def __init__(self):
+        self.color_filter = None
 
-    FLIP_LEFT = False
-    FLIP_TOP = False
-    ROTATION_ANGLE = 0
+        self.flip_left = False
+        self.flip_top = False
+        self.rotation_angle = 0
 
-    SIZE = None
+        self.size = None
 
-    class ADJUSTING:
-        BRIGHTNESS = 0
-        SHARPNESS = 0
-        CONTRAST = 0
+        self.brightness = 0
+        self.sharpness = 0
+        self.contrast = 0
 
-    @staticmethod
-    def reset():
-        OPERATIONS.ADJUSTING.BRIGHTNESS = 0
-        OPERATIONS.ADJUSTING.SHARPNESS = 0
-        OPERATIONS.ADJUSTING.CONTRAST = 0
+    def reset(self):
+        self.color_filter = None
 
-        OPERATIONS.SIZE = None
+        self.brightness = 0
+        self.sharpness = 0
+        self.contrast = 0
 
-        OPERATIONS.FLIP_LEFT = False
-        OPERATIONS.FLIP_TOP = False
-        OPERATIONS.ROTATION_ANGLE = 0
+        self.size = None
 
-        OPERATIONS.COLOR_FILTER = None
+        self.flip_left = False
+        self.flip_top = False
+        self.rotation_angle = 0
 
-    @staticmethod
-    def has_changes():
-        if OPERATIONS.COLOR_FILTER or OPERATIONS.FLIP_LEFT\
-                or OPERATIONS.FLIP_TOP or OPERATIONS.ROTATION_ANGLE\
-                or OPERATIONS.ADJUSTING.CONTRAST or OPERATIONS.ADJUSTING.BRIGHTNESS\
-                or OPERATIONS.ADJUSTING.SHARPNESS:
-            return True
-        else:
-            return False
+    def has_changes(self):
+        return self.color_filter or self.flip_left\
+                or self.flip_top or self.rotation_angle\
+                or self.contrast or self.brightness\
+                or self.sharpness or self.size
 
     def __str__(self):
-        return 'implement it!!!!!!!!!!!'
+        return f"size: {self.size}, filter: {self.color_filter}, " \
+               f"b: {self.brightness} c: {self.contrast} s: {self.sharpness}, " \
+               f"flip-left: {self.flip_left} flip-top: {self.flip_top} rotation: {self.rotation_angle}"
+
+
+operations = Operations()
 
 
 def _get_ratio_height(width, height, r_width):
@@ -98,11 +97,11 @@ def _get_converted_point(user_p1, user_p2, p1, p2, x):
 
 
 def _get_img_with_all_operations():
-    logger.debug(OPERATIONS)
+    logger.debug(operations)
 
-    b = OPERATIONS.ADJUSTING.BRIGHTNESS
-    c = OPERATIONS.ADJUSTING.CONTRAST
-    s = OPERATIONS.ADJUSTING.SHARPNESS
+    b = operations.brightness
+    c = operations.contrast
+    s = operations.sharpness
 
     img = _img_preview
     if b != 0:
@@ -114,17 +113,17 @@ def _get_img_with_all_operations():
     if s != 0:
         img = img_helper.sharpness(img, s)
 
-    if OPERATIONS.ROTATION_ANGLE:
-        img = img_helper.rotate(img, OPERATIONS.ROTATION_ANGLE)
+    if operations.rotation_angle:
+        img = img_helper.rotate(img, operations.rotation_angle)
 
-    if OPERATIONS.FLIP_LEFT:
+    if operations.flip_left:
         img = img_helper.flip_left(img)
 
-    if OPERATIONS.FLIP_TOP:
+    if operations.flip_top:
         img = img_helper.flip_top(img)
 
-    if OPERATIONS.SIZE:
-        img = img_helper.resize(img, *OPERATIONS.SIZE)
+    if operations.size:
+        img = img_helper.resize(img, *operations.size)
 
     return img
 
@@ -203,33 +202,25 @@ class RotationTab(QWidget):
     def on_rotate_left(self):
         logger.debug("rotate left")
 
-        OPERATIONS.ROTATION_ANGLE = 0 if OPERATIONS.ROTATION_ANGLE == 270 else OPERATIONS.ROTATION_ANGLE + 90
-        # global _img_preview
-        # _img_preview = img_helper.rotate(_img_preview, 90)
+        operations.rotation_angle = 0 if operations.rotation_angle == 270 else operations.rotation_angle + 90
         self.parent.parent.place_preview_img()
 
     def on_rotate_right(self):
         logger.debug("rotate left")
 
-        OPERATIONS.ROTATION_ANGLE = 0 if OPERATIONS.ROTATION_ANGLE == -270 else OPERATIONS.ROTATION_ANGLE - 90
-        # global _img_preview
-        # _img_preview = img_helper.rotate(_img_preview, -90)
+        operations.rotation_angle = 0 if operations.rotation_angle == -270 else operations.rotation_angle - 90
         self.parent.parent.place_preview_img()
 
     def on_flip_left(self):
         logger.debug("flip left-right")
 
-        OPERATIONS.FLIP_LEFT = not OPERATIONS.FLIP_LEFT
-        # global _img_preview
-        # _img_preview = img_helper.flip_left(_img_preview)
+        operations.flip_left = not operations.flip_left
         self.parent.parent.place_preview_img()
 
     def on_flip_top(self):
         logger.debug("flip top-bottom")
 
-        OPERATIONS.FLIP_TOP = not OPERATIONS.FLIP_TOP
-        # global _img_preview
-        # img_output = img_helper.flip_top(_img_preview)
+        operations.flip_top = not operations.flip_top
         self.parent.parent.place_preview_img()
 
 
@@ -312,7 +303,7 @@ class ModificationTab(QWidget):
     def on_apply(self, e):
         logger.debug("apply")
 
-        OPERATIONS.SIZE = int(self.width_box.text()), int(self.height_box.text())
+        operations.size = int(self.width_box.text()), int(self.height_box.text())
 
         self.parent.parent.update_img_size_lbl()
         self.parent.parent.place_preview_img()
@@ -374,36 +365,40 @@ class AdjustingTab(QWidget):
 
     def on_brightness_slider_released(self):
         logger.debug(f"brightness selected value: {self.brightness_slider.value()}")
+
         self.brightness_slider.setToolTip(str(self.brightness_slider.value()))
 
-        factor = _get_converted_point(SLIDER_MIN_VAL, SLIDER_MAX_VAL, img_helper.BRIGHTNESS_FACTOR_MIN, img_helper.BRIGHTNESS_FACTOR_MAX, self.brightness_slider.value())
+        factor = _get_converted_point(SLIDER_MIN_VAL, SLIDER_MAX_VAL, img_helper.BRIGHTNESS_FACTOR_MIN,
+                                      img_helper.BRIGHTNESS_FACTOR_MAX, self.brightness_slider.value())
         logger.debug(f"brightness factor: {factor}")
 
-        OPERATIONS.ADJUSTING.BRIGHTNESS = factor
+        operations.brightness = factor
 
         self.parent.parent.place_preview_img()
 
     def on_sharpness_slider_released(self):
         logger.debug(self.sharpness_slider.value())
+
         self.sharpness_slider.setToolTip(str(self.sharpness_slider.value()))
 
         factor = _get_converted_point(SLIDER_MIN_VAL, SLIDER_MAX_VAL, img_helper.SHARPNESS_FACTOR_MIN,
                                       img_helper.SHARPNESS_FACTOR_MAX, self.sharpness_slider.value())
         logger.debug(f"sharpness factor: {factor}")
 
-        OPERATIONS.ADJUSTING.SHARPNESS = factor
+        operations.sharpness = factor
 
         self.parent.parent.place_preview_img()
 
     def on_contrast_slider_released(self):
         logger.debug(self.contrast_slider.value())
+
         self.contrast_slider.setToolTip(str(self.contrast_slider.value()))
 
         factor = _get_converted_point(SLIDER_MIN_VAL, SLIDER_MAX_VAL, img_helper.CONTRAST_FACTOR_MIN,
                                       img_helper.CONTRAST_FACTOR_MAX, self.contrast_slider.value())
         logger.debug(f"contrast factor: {factor}")
 
-        OPERATIONS.ADJUSTING.CONTRAST = factor
+        operations.contrast = factor
 
         self.parent.parent.place_preview_img()
 
@@ -451,14 +446,14 @@ class FiltersTab(QWidget):
         else:
             _img_preview = _img_original.copy()
 
-        OPERATIONS.COLOR_FILTER = filter_name
+        operations.color_filter = filter_name
         self.toggle_thumbs()
 
         self.parent.parent.place_preview_img()
 
     def toggle_thumbs(self):
         for thumb in self.findChildren(QLabel):
-            color = THUMB_BORDER_COLOR_ACTIVE if thumb.name == OPERATIONS.COLOR_FILTER else THUMB_BORDER_COLOR
+            color = THUMB_BORDER_COLOR_ACTIVE if thumb.name == operations.color_filter else THUMB_BORDER_COLOR
             thumb.setStyleSheet(f"border:2px solid {color};")
 
 
@@ -582,8 +577,8 @@ class MainLayout(QVBoxLayout):
         logger.debug("update img size lbl")
 
         self.img_size_lbl.setText(f"<span style='font-size:11px'>"
-                                  f"image size {OPERATIONS.SIZE[0] if OPERATIONS.SIZE else _img_original.width} × "
-                                  f"{OPERATIONS.SIZE[1] if OPERATIONS.SIZE else _img_original.height}"
+                                  f"image size {operations.size[0] if operations.size else _img_original.width} × "
+                                  f"{operations.size[1] if operations.size else _img_original.height}"
                                   f"</span>")
 
     def on_reset(self):
@@ -592,7 +587,9 @@ class MainLayout(QVBoxLayout):
         global _img_preview
         _img_preview = _img_original.copy()
 
-        OPERATIONS.reset()
+        operations.reset()
+
+        self.action_tabs.filters_tab.toggle_thumbs()
         self.place_preview_img()
         self.action_tabs.adjustment_tab.reset_sliders()
         self.action_tabs.modification_tab.set_boxes()
@@ -626,7 +623,7 @@ class EasyPzUI(QWidget):
     def closeEvent(self, event):
         logger.debug("close")
 
-        if OPERATIONS.has_changes():
+        if operations.has_changes():
             reply = QMessageBox.question(self, "",
                                          "You have unsaved changes<br>Are you sure?", QMessageBox.Yes |
                                          QMessageBox.No, QMessageBox.No)
