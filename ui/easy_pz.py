@@ -605,7 +605,7 @@ class EasyPzUI(QWidget):
         self.main_layout = MainLayout(self)
         self.setLayout(self.main_layout)
 
-        self.setMinimumSize(300, 300)
+        self.setMinimumSize(600, 500)
         self.setMaximumSize(900, 900)
         self.setGeometry(600, 600, 600, 600)
         self.setWindowTitle('Easy Peasy - Lemon Squeezy')
