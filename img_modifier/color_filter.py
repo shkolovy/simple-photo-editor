@@ -2,7 +2,6 @@
 Apply filters to PIL.image
 """
 
-from PIL import ImageDraw
 import logging
 
 logger = logging.getLogger()
@@ -15,29 +14,26 @@ class ColorFilters:
 
 def sepia(img):
     pix = img.load()
-    draw = ImageDraw.Draw(img)
     for i in range(img.width):
         for j in range(img.height):
             s = sum(pix[i, j]) // 3
             k = 30
-            draw.point((i, j), (s+k*2, s+k, s))
+            pix[i, j] = (s+k*2, s+k, s)
 
 
 def black_white(img):
     pix = img.load()
-    draw = ImageDraw.Draw(img)
     for i in range(img.width):
         for j in range(img.height):
             s = sum(pix[i, j]) // 3
-            draw.point((i, j), (s, s, s))
+            pix[i, j] = (s, s, s)
 
 
 def negative(img):
     pix = img.load()
-    draw = ImageDraw.Draw(img)
     for i in range(img.width):
         for j in range(img.height):
-            draw.point((i, j), (255 - pix[i, j][0], 255 - pix[i, j][1], 255 - pix[i, j][2]))
+            pix[i, j] = (255 - pix[i, j][0], 255 - pix[i, j][1], 255 - pix[i, j][2])
 
 
 def color_filter(img, filter_name):

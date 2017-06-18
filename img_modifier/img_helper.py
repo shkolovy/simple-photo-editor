@@ -48,13 +48,6 @@ def rotate(img, angle):
     return img.rotate(angle, expand=True)
 
 
-# def blur(img, point, spread):
-#     """Blur image"""
-#
-#     # todo: add blur module
-#     pass
-
-
 def color_filter(img, filter_name):
     """Filter image"""
 
