@@ -5,7 +5,7 @@ Implementation of simple photo editor
 *example of using from terminal:*
 
 ```bash
-python3 runner.py -p temp.jpg color_filter=sepia --rotate=45 --resize=200,300
+python3 img_modifier.py -p temp.jpg color_filter=sepia --rotate=45 --resize=200,300
 ```
 
 **All commands list:**
