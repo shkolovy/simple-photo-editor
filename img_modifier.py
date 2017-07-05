@@ -1,10 +1,10 @@
 """
 Command line usage:
-    python3 runner.py [-p <path>]
+    python3 img_modifier.py [-p <path>]
     [--rotate=<angle>] [--resize=<width,height>] [--color_filter=<filter_name>]
     [--flip_top] [--flip_left] [--rotate=<angle>]
 
-    example: python3 runner.py -p temp.jpg --rotate=45 --resize=200,300 --flip_top
+    example: python3 img_modifier.py -p temp.jpg --rotate=45 --resize=200,300 --flip_top
 
 Options:
   -p path:  path to initial image
