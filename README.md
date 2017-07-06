@@ -30,3 +30,7 @@ Use **PyInstaller** to convert it
 to install all packages use **pip3 install -r requirements.txt**
 
 > !this application was made as a training app so it can have bugs and bad optimization.
+
+windows version:
+
+![ScreenShot](https://github.com/shkolovy/simple-photo-editor/blob/master/win-version.png)
